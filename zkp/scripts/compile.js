@@ -11,6 +11,24 @@ const path = require('path');
 const CIRCUIT_NAME = 'simple_proof';  // Dùng circuit đơn giản trước
 const CIRCUITS_DIR = path.join(__dirname, '..', 'circuits');
 const BUILD_DIR = path.join(__dirname, '..', 'build');
+const PROJECT_ROOT = path.join(__dirname, '..');
+
+function commandExists(command) {
+    try {
+        execSync(`${command} --help`, { stdio: 'ignore' });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function resolveCircomCommand() {
+    if (process.env.CIRCOM_BIN) return process.env.CIRCOM_BIN;
+    if (commandExists('circom')) return 'circom';
+    if (commandExists('circom2')) return 'circom2';
+    if (commandExists('npx circom2')) return 'npx circom2';
+    return null;
+}
 
 async function compile() {
     console.log('🔧 Compiling Circom circuit...\n');
@@ -30,11 +48,19 @@ async function compile() {
     try {
         // Compile với circom
         console.log(`📄 Compiling ${CIRCUIT_NAME}.circom...`);
+
+        const circomCommand = resolveCircomCommand();
+        if (!circomCommand) {
+            throw new Error('Circom compiler not found');
+        }
+        console.log(`🧩 Using compiler: ${circomCommand}`);
         
-        const cmd = `circom "${circuitPath}" --r1cs --wasm --sym --c -o "${BUILD_DIR}"`;
+        const circuitRelativePath = path.join('circuits', `${CIRCUIT_NAME}.circom`);
+        const outputRelativePath = 'build';
+        const cmd = `${circomCommand} "${circuitRelativePath}" --r1cs --wasm --sym -o "${outputRelativePath}"`;
         console.log(`> ${cmd}\n`);
         
-        execSync(cmd, { stdio: 'inherit' });
+        execSync(cmd, { stdio: 'inherit', cwd: PROJECT_ROOT });
         
         console.log('\n✅ Compilation successful!');
         console.log('\nGenerated files:');
@@ -44,9 +70,9 @@ async function compile() {
         
     } catch (error) {
         console.error('❌ Compilation failed:', error.message);
-        console.log('\n💡 Make sure circom is installed:');
-        console.log('   npm install -g circom');
-        console.log('   Or: cargo install --path circom (from source)');
+        console.log('\n💡 Make sure circom is installed (one of these):');
+        console.log('   npm install -g circom2');
+        console.log('   Or: cargo install --git https://github.com/iden3/circom.git');
         process.exit(1);
     }
 }

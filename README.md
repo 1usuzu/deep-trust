@@ -108,7 +108,7 @@ npx hardhat node
 Hardhat sẽ hiển thị danh sách accounts. **Lưu lại Account #0**:
 
 - Address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
-- Private Key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+- Private Key: copy từ output của `npx hardhat node`
 
 ### Terminal 2: Deploy Contract
 
@@ -122,8 +122,8 @@ Copy địa chỉ contract được hiển thị (ví dụ: `0xe7f1725E7734CE288
 ### Terminal 3: Backend API
 
 ```bash
-# Thiết lập biến môi trường (dùng Private Key của Account #0)
-$env:SERVER_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+# Thiết lập biến môi trường (dùng Private Key của Account #0 lấy từ output Hardhat)
+$env:SERVER_PRIVATE_KEY = "<YOUR_HARDHAT_ACCOUNT_0_PRIVATE_KEY>"
 
 cd backend
 python -m uvicorn api:app --reload --port 8000
@@ -159,7 +159,7 @@ VITE_CHAIN_ID=31337
 
 2. **Import Account #0:**
    - Vào MetaMask > Import Account
-   - Paste Private Key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+  - Paste Private Key: dùng key Account #0 từ output `npx hardhat node`
 
 ### Sử dụng ứng dụng
 
@@ -190,6 +190,29 @@ networks: {
 ```bash
 cd blockchain
 npx hardhat run scripts/deploy.js --network amoy
+```
+
+## Checklist trước khi đẩy GitHub/Hosting
+
+1. Không commit file chứa secrets (`.env`, private key, token).
+2. Backend bắt buộc có biến môi trường:
+
+```env
+SERVER_PRIVATE_KEY=<YOUR_BACKEND_ORACLE_PRIVATE_KEY>
+ALLOWED_ORIGINS=https://your-frontend-domain.com
+```
+
+3. Chỉ dùng local fallback khi dev:
+
+```env
+ALLOW_INSECURE_DEV_KEY=true
+INSECURE_DEV_PRIVATE_KEY=<HARDHAT_ACCOUNT_PRIVATE_KEY>
+```
+
+4. Tắt fallback local trước khi deploy production:
+
+```env
+ALLOW_INSECURE_DEV_KEY=false
 ```
 
 ## API Endpoints

@@ -5,7 +5,7 @@
  * CHÚ Ý: Trong production, cần ceremony với nhiều participants!
  */
 
-const snarkjs = require('snarkjs');
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,31 +38,21 @@ async function setup() {
         // Kiểm tra nếu đã có ptau file (có thể download sẵn)
         if (!fs.existsSync(ptauPath)) {
             console.log('   Generating new Powers of Tau (this may take a while)...');
+            const pot0000 = path.join(KEYS_DIR, 'pot12_0000.ptau');
+            const pot0001 = path.join(KEYS_DIR, 'pot12_0001.ptau');
             
-            // Bắt đầu ceremony
-            await snarkjs.powersOfTau.newAccumulator(
-                snarkjs.curves.bn128, 
-                12,  // 2^12 = 4096 constraints max
-                path.join(KEYS_DIR, 'pot12_0000.ptau')
+            execSync(`npx snarkjs powersoftau new bn128 12 "${pot0000}" -v`, { stdio: 'inherit' });
+            
+            execSync(
+                `npx snarkjs powersoftau contribute "${pot0000}" "${pot0001}" --name="First contribution" -v -e="random-entropy-${Date.now()}"`,
+                { stdio: 'inherit' }
             );
             
-            // Contribute (trong production cần nhiều người contribute)
-            await snarkjs.powersOfTau.contribute(
-                path.join(KEYS_DIR, 'pot12_0000.ptau'),
-                path.join(KEYS_DIR, 'pot12_0001.ptau'),
-                'First contribution',
-                'random-entropy-' + Date.now()
-            );
-            
-            // Prepare phase 2
-            await snarkjs.powersOfTau.preparePhase2(
-                path.join(KEYS_DIR, 'pot12_0001.ptau'),
-                ptauPath
-            );
+            execSync(`npx snarkjs powersoftau prepare phase2 "${pot0001}" "${ptauPath}" -v`, { stdio: 'inherit' });
             
             // Cleanup intermediate files
-            fs.unlinkSync(path.join(KEYS_DIR, 'pot12_0000.ptau'));
-            fs.unlinkSync(path.join(KEYS_DIR, 'pot12_0001.ptau'));
+            if (fs.existsSync(pot0000)) fs.unlinkSync(pot0000);
+            if (fs.existsSync(pot0001)) fs.unlinkSync(pot0001);
             
             console.log('   ✅ Powers of Tau completed\n');
         } else {
@@ -74,31 +64,23 @@ async function setup() {
         
         const zkeyPath = path.join(KEYS_DIR, `${CIRCUIT_NAME}.zkey`);
         const vkeyPath = path.join(KEYS_DIR, `${CIRCUIT_NAME}_verification_key.json`);
+        const zkey0000 = path.join(KEYS_DIR, `${CIRCUIT_NAME}_0000.zkey`);
         
-        // Generate initial zkey
-        await snarkjs.zKey.newZKey(
-            r1csPath,
-            ptauPath,
-            path.join(KEYS_DIR, `${CIRCUIT_NAME}_0000.zkey`)
-        );
+        execSync(`npx snarkjs groth16 setup "${r1csPath}" "${ptauPath}" "${zkey0000}"`, { stdio: 'inherit' });
         
-        // Contribute to phase 2
-        await snarkjs.zKey.contribute(
-            path.join(KEYS_DIR, `${CIRCUIT_NAME}_0000.zkey`),
-            zkeyPath,
-            'Deepfake Verification Contribution',
-            'entropy-' + Math.random().toString(36)
+        execSync(
+            `npx snarkjs zkey contribute "${zkey0000}" "${zkeyPath}" --name="Deepfake Verification Contribution" -v -e="entropy-${Math.random().toString(36)}"`,
+            { stdio: 'inherit' }
         );
         
         // Cleanup
-        fs.unlinkSync(path.join(KEYS_DIR, `${CIRCUIT_NAME}_0000.zkey`));
+        if (fs.existsSync(zkey0000)) fs.unlinkSync(zkey0000);
         
         console.log('   ✅ Proving key generated\n');
         
         // Export verification key
         console.log('📤 Exporting verification key...');
-        const vkey = await snarkjs.zKey.exportVerificationKey(zkeyPath);
-        fs.writeFileSync(vkeyPath, JSON.stringify(vkey, null, 2));
+        execSync(`npx snarkjs zkey export verificationkey "${zkeyPath}" "${vkeyPath}"`, { stdio: 'inherit' });
         
         console.log('\n✅ Trusted Setup completed!');
         console.log('\nGenerated files:');

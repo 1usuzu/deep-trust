@@ -22,12 +22,30 @@ import uvicorn
 import hashlib
 import tempfile
 
+def _load_local_env_file() -> None:
+    env_file = Path(__file__).parent / ".env"
+    if not env_file.exists():
+        return
+
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+_load_local_env_file()
+
 # Try to import ensemble detector first (best), then v4, then v1
+DeepfakeDetector = None
 try:
     from detect import DeepfakeDetector
     DETECTOR_VERSION = "ensemble"
 except ImportError:
-    print("Error: detect.py not found")
+    print("Warning: detect.py not found - AI detection disabled")
     DETECTOR_VERSION = "none"
 
 from zkp_oracle import ZKPOracle
@@ -41,11 +59,16 @@ except ImportError:
     print("Warning: DID System not available")
 
 # --- CẤU HÌNH BẢO MẬT (PRIVATE KEY) ---
-# Lấy từ biến môi trường. Nếu không có, dùng Hardhat Account #0 (chỉ dùng cho dev)
-SERVER_PRIVATE_KEY = os.environ.get(
-    "SERVER_PRIVATE_KEY", 
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-) 
+# BẮT BUỘC: Lấy từ biến môi trường, KHÔNG hardcode trong source
+SERVER_PRIVATE_KEY = os.environ.get("SERVER_PRIVATE_KEY")
+ALLOW_INSECURE_DEV_KEY = os.environ.get("ALLOW_INSECURE_DEV_KEY", "false").lower() == "true"
+INSECURE_DEV_PRIVATE_KEY = os.environ.get("INSECURE_DEV_PRIVATE_KEY")
+
+# CORS origins: mặc định chỉ cho frontend local
+_default_origins = "http://localhost:5173,http://127.0.0.1:5173"
+_origins_env = os.environ.get("ALLOWED_ORIGINS", _default_origins)
+ALLOWED_ORIGINS = [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
+ALLOW_CREDENTIALS = "*" not in ALLOWED_ORIGINS
 
 detector = None
 zkp_oracle = None
@@ -57,13 +80,31 @@ async def lifespan(app: FastAPI):
     global detector, zkp_oracle, did_service
     print("Starting Deepfake Verification API...")
     print(f"Detector version: {DETECTOR_VERSION}")
+
+    global SERVER_PRIVATE_KEY
+    if not SERVER_PRIVATE_KEY and ALLOW_INSECURE_DEV_KEY:
+        if not INSECURE_DEV_PRIVATE_KEY:
+            raise RuntimeError(
+                "ALLOW_INSECURE_DEV_KEY=true but INSECURE_DEV_PRIVATE_KEY is missing."
+            )
+        SERVER_PRIVATE_KEY = INSECURE_DEV_PRIVATE_KEY
+        print("WARNING: Using insecure dev private key fallback. Do not use in production.")
+
+    if not SERVER_PRIVATE_KEY:
+        raise RuntimeError(
+            "SERVER_PRIVATE_KEY is required. Set it in environment before starting backend."
+        )
     
-    model_dir = Path(__file__).parent.parent / "ai_deepfake" / "models"
-    if (model_dir / "best_model.pth").exists():
-        detector = DeepfakeDetector(model_dir=str(model_dir))
-        print("Ensemble AI Detector initialized (EfficientNet-B0 + B4)")
+    # Initialize AI Detector
+    if DeepfakeDetector is not None:
+        model_dir = Path(__file__).parent.parent / "ai_deepfake" / "models"
+        if (model_dir / "best_model.pth").exists():
+            detector = DeepfakeDetector()  # Singleton, không cần tham số
+            print("Ensemble AI Detector initialized (EfficientNet-B0 + B4)")
+        else:
+            print(f"Model not found at {model_dir}")
     else:
-        print(f"Model not found at {model_dir}")
+        print("AI Detector not available - running in limited mode")
     
     # Initialize ZKP Oracle
     zkp_oracle = ZKPOracle(SERVER_PRIVATE_KEY)
@@ -85,8 +126,8 @@ app = FastAPI(title="Deepfake Verification API", version="1.0.0", lifespan=lifes
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -101,7 +142,8 @@ async def verify_image(
     if detector is None:
         raise HTTPException(status_code=503, detail="AI Detector not initialized")
     
-    if not file.content_type.startswith("image/"):
+    content_type = (file.content_type or "").lower()
+    if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     temp_file = None
@@ -121,16 +163,13 @@ async def verify_image(
         image_hash = hashlib.sha256(content).hexdigest()
         
         # Enhanced detector with multi-method analysis
-        detection_result = detector.detect(temp_file.name, use_tta=True)
+        detection_result = detector.predict(temp_file.name)
         result = {
             "label": "FAKE" if detection_result.is_fake else "REAL",
             "confidence": detection_result.confidence,
             "fake_prob": detection_result.fake_probability,
             "real_prob": 1 - detection_result.fake_probability,
-            "risk_level": detection_result.risk_level.value,
-            "methods_used": detection_result.methods_used,
-            "method_scores": detection_result.method_scores,
-            "recommendation": detection_result.recommendation
+            "risk_level": detection_result.risk_level.value
         }
         
         # 2. Logic Ký số (Signing)
@@ -152,9 +191,7 @@ async def verify_image(
             "signature": signature,   # <--- TRẢ VỀ CHỮ KÝ CHO FRONTEND
             "debug_msg": msg_content,
             "detector_version": DETECTOR_VERSION,
-            "risk_level": result.get("risk_level", "unknown"),
-            "methods_used": result.get("methods_used", ["neural"]),
-            "recommendation": result.get("recommendation", "")
+            "risk_level": result.get("risk_level", "unknown")
         }
         
     except Exception as e:
@@ -190,7 +227,8 @@ async def verify_image_zkp(
     if detector is None:
         raise HTTPException(status_code=503, detail="AI Detector not initialized")
     
-    if not file.content_type.startswith("image/"):
+    content_type = (file.content_type or "").lower()
+    if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     temp_file = None
@@ -208,7 +246,7 @@ async def verify_image_zkp(
         # 1. AI Prediction
         image_hash = hashlib.sha256(content).hexdigest()
         
-        detection_result = detector.detect(temp_file.name, use_tta=True)
+        detection_result = detector.predict(temp_file.name)
         result = {
             "label": "FAKE" if detection_result.is_fake else "REAL",
             "confidence": detection_result.confidence,
@@ -366,7 +404,8 @@ async def issue_credential(
     if not DID_AVAILABLE or did_service is None:
         raise HTTPException(status_code=503, detail="DID Service not available")
     
-    if not file.content_type.startswith("image/"):
+    content_type = (file.content_type or "").lower()
+    if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     temp_file = None
@@ -383,10 +422,10 @@ async def issue_credential(
         
         # 1. AI Prediction
         image_hash = hashlib.sha256(content).hexdigest()
-        result = detector.predict(temp_file.name)
+        detection_result = detector.predict(temp_file.name)
         
         # 2. Create Oracle Signature
-        is_real = result["label"] == "REAL"
+        is_real = not detection_result.is_fake
         is_real_str = "true" if is_real else "false"
         msg_content = f"{user_address.lower()}:{image_hash}:{is_real_str}"
         message = encode_defunct(text=msg_content)
@@ -398,13 +437,13 @@ async def issue_credential(
             user_address=user_address,
             image_hash=image_hash,
             is_real=is_real,
-            confidence=result["confidence"],
+            confidence=detection_result.confidence,
             oracle_signature=signature
         )
         
         return {
-            "label": result["label"],
-            "confidence": result["confidence"],
+            "label": "REAL" if is_real else "FAKE",
+            "confidence": detection_result.confidence,
             "image_hash": image_hash,
             "credential": credential.to_dict(),
             "credential_id": credential.id,

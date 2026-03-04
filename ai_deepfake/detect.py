@@ -116,11 +116,27 @@ class DeepfakeDetector:
         logger.info(f"AI Engine initialized on {self.device}")
 
     def _load_models(self):
+        model_dirs = [
+            settings.MODEL_DIR,
+            Path(__file__).parent.parent / 'models'
+        ]
+
+        selected_model_dir = None
+        for model_dir in model_dirs:
+            if (model_dir / 'best_model.pth').exists() or (model_dir / 'best_model_v2.pth').exists():
+                selected_model_dir = model_dir
+                break
+
+        if selected_model_dir is None:
+            selected_model_dir = settings.MODEL_DIR
+
+        logger.info(f"Using model directory: {selected_model_dir}")
+
         # Model V1 (EfficientNet-B0)
         try:
             self.model_v1 = models.efficientnet_b0(weights=None)
             self.model_v1.classifier = nn.Sequential(nn.Dropout(0.2), nn.Linear(1280, 2))
-            ckpt = torch.load(settings.MODEL_DIR / 'best_model.pth', map_location=self.device, weights_only=False)
+            ckpt = torch.load(selected_model_dir / 'best_model.pth', map_location=self.device, weights_only=False)
             self.model_v1.load_state_dict(ckpt.get('model_state_dict', ckpt))
             self.model_v1.to(self.device).eval()
         except Exception as e:
@@ -130,7 +146,7 @@ class DeepfakeDetector:
         # Model V2 (EfficientNet-B4)
         try:
             self.model_v2 = _EfficientNetB4()
-            ckpt = torch.load(settings.MODEL_DIR / 'best_model_v2.pth', map_location=self.device, weights_only=False)
+            ckpt = torch.load(selected_model_dir / 'best_model_v2.pth', map_location=self.device, weights_only=False)
             self.model_v2.load_state_dict(ckpt.get('model_state_dict', ckpt))
             self.model_v2.to(self.device).eval()
         except Exception as e:

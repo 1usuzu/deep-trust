@@ -63,9 +63,27 @@ async function main() {
     amoy: "Polygon Amoy"
   };
   const networkName = networkNames[hre.network.name] || "Unknown";
+
+  const rpcUrls = {
+    localhost: "http://127.0.0.1:8545",
+    hardhat: "http://127.0.0.1:8545",
+    sepolia: process.env.SEPOLIA_RPC || "https://rpc.sepolia.org",
+    amoy: process.env.POLYGON_AMOY_RPC || "https://rpc-amoy.polygon.technology/"
+  };
+  const rpcUrl = rpcUrls[hre.network.name] || "http://127.0.0.1:8545";
   
   if (fs.existsSync(envPath)) {
     let envContent = fs.readFileSync(envPath, "utf8");
+    const currentChainMatch = envContent.match(/VITE_CHAIN_ID=(\d+)/);
+    const currentFrontendChainId = currentChainMatch ? Number(currentChainMatch[1]) : null;
+    const forceUpdateFrontendEnv = process.env.FORCE_UPDATE_FRONTEND_ENV === "true";
+
+    if (!forceUpdateFrontendEnv && currentFrontendChainId && currentFrontendChainId !== chainId) {
+      console.log(`Skipped frontend .env update: current VITE_CHAIN_ID=${currentFrontendChainId}, deploy network chainId=${chainId}.`);
+      console.log("Set FORCE_UPDATE_FRONTEND_ENV=true to override.");
+      return;
+    }
+
     // Replace contract address
     envContent = envContent.replace(
       /VITE_CONTRACT_ADDRESS=.*/,
@@ -83,6 +101,14 @@ async function main() {
         `VITE_NETWORK_NAME=${networkName}`
       );
     }
+    if (envContent.includes("VITE_RPC_URL=")) {
+      envContent = envContent.replace(
+        /VITE_RPC_URL=.*/,
+        `VITE_RPC_URL=${rpcUrl}`
+      );
+    } else {
+      envContent += `\nVITE_RPC_URL=${rpcUrl}\n`;
+    }
     fs.writeFileSync(envPath, envContent);
     console.log(`Frontend .env updated! (Contract: ${contractAddress}, Chain: ${chainId})`);
   } else {
@@ -91,6 +117,7 @@ async function main() {
 VITE_CONTRACT_ADDRESS=${contractAddress}
 VITE_CHAIN_ID=${chainId}
 VITE_NETWORK_NAME=${networkName}
+VITE_RPC_URL=${rpcUrl}
 `;
     fs.writeFileSync(envPath, newEnv);
     console.log("Frontend .env created with contract address!");

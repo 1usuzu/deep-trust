@@ -5,6 +5,7 @@
  */
 
 import * as snarkjs from 'snarkjs';
+import { buildPoseidon } from 'circomlibjs';
 
 // Poseidon hash constants (pre-computed for browser)
 // Trong thực tế, cần import từ circomlibjs hoặc compute on-demand
@@ -14,6 +15,8 @@ export class BrowserZKProof {
         this.wasmPath = '/zkp/simple_proof.wasm';
         this.zkeyPath = '/zkp/simple_proof.zkey';
         this.initialized = false;
+        this.poseidon = null;
+        this.field = null;
     }
 
     /**
@@ -22,32 +25,26 @@ export class BrowserZKProof {
     async init() {
         // Preload files
         console.log('Loading ZK proving files...');
+        if (!this.poseidon) {
+            this.poseidon = await buildPoseidon();
+            this.field = this.poseidon.F;
+        }
         this.initialized = true;
     }
 
-    /**
-     * Generate commitment từ verification result
-     * Sử dụng Web Crypto API cho hashing
-     */
-    async computeCommitment(imageHash, isReal, userSecret) {
-        // Simplified: dùng SHA256 thay vì Poseidon cho browser
-        // Trong production, cần port Poseidon sang WASM
-        const encoder = new TextEncoder();
-        const data = encoder.encode(`${imageHash}:${isReal}:${userSecret}`);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    toField(value) {
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number') return BigInt(value);
+        if (typeof value === 'string') {
+            if (value.startsWith('0x')) return BigInt(value);
+            return BigInt(value);
+        }
+        throw new Error('Unsupported field value type');
     }
 
-    /**
-     * Generate nullifier
-     */
-    async computeNullifier(imageHash, userSecret) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(`nullifier:${imageHash}:${userSecret}`);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    poseidonToBigInt(inputs) {
+        const hashed = this.poseidon(inputs);
+        return BigInt(this.field.toString(hashed));
     }
 
     /**
@@ -61,12 +58,25 @@ export class BrowserZKProof {
             throw new Error('Chỉ có thể tạo proof cho ảnh REAL');
         }
 
-        const imageHash = verificationResult.image_hash;
-        const signature = verificationResult.signature;
+        if (!this.initialized) {
+            await this.init();
+        }
 
-        // Compute values
-        const nullifier = await this.computeNullifier(imageHash, userSecret);
-        const commitment = await this.computeCommitment(imageHash, '1', userSecret);
+        const imageHash = verificationResult.image_hash;
+        const oracleSecretHex = verificationResult.oracle_secret;
+
+        if (!imageHash || !oracleSecretHex) {
+            throw new Error('Thiếu image_hash hoặc oracle_secret từ backend');
+        }
+
+        const imageHashField = this.toField(`0x${imageHash}`);
+        const isRealField = 1n;
+        const oracleSecretField = this.toField(`0x${oracleSecretHex}`);
+        const userSecretField = this.toField(userSecret);
+
+        const nullifier = this.poseidonToBigInt([imageHashField, userSecretField]);
+        const oracleCheck = this.poseidonToBigInt([imageHashField, isRealField, oracleSecretField]);
+        const commitment = this.poseidonToBigInt([oracleCheck, userSecretField, nullifier]);
 
         // Trong production, đây là nơi gọi snarkjs.groth16.fullProve
         // Cần WASM file và zkey file được serve từ server
@@ -76,12 +86,12 @@ export class BrowserZKProof {
         try {
             // Circuit inputs
             const input = {
-                commitment: BigInt(commitment).toString(),
-                nullifier: BigInt(nullifier).toString(),
-                imageHash: BigInt('0x' + imageHash).toString(),
+                commitment: commitment.toString(),
+                nullifier: nullifier.toString(),
+                imageHash: imageHashField.toString(),
                 isReal: '1',
-                oracleSecret: BigInt('0x' + signature.substring(0, 64)).toString(),
-                userSecret: BigInt(userSecret).toString()
+                oracleSecret: oracleSecretField.toString(),
+                userSecret: userSecretField.toString()
             };
 
             // Generate proof
@@ -98,8 +108,8 @@ export class BrowserZKProof {
                 proof,
                 publicSignals,
                 calldata,
-                commitment,
-                nullifier,
+                commitment: `0x${commitment.toString(16)}`,
+                nullifier: `0x${nullifier.toString(16)}`,
                 success: true
             };
         } catch (error) {

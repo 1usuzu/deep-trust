@@ -13,7 +13,10 @@ const getExplorerUrl = (txHash) => {
 
 function VerificationResult({ result }) {
   const isReal = result.label === 'REAL';
-  const confidence = (result.confidence * 100).toFixed(1);
+  const realProb = Number(result.real_prob ?? 0);
+  const fakeProb = Number(result.fake_prob ?? 0);
+  const confidenceScore = isReal ? realProb : fakeProb;
+  const confidence = (Math.max(0, Math.min(1, confidenceScore)) * 100).toFixed(1);
 
   return (
     <div className={`verification-result ${isReal ? 'real' : 'fake'}`}>
@@ -51,13 +54,13 @@ function VerificationResult({ result }) {
           <div className="meta-item">
             <span className="meta-label">Real Probability</span>
             <span className="meta-value" style={{ color: isReal ? 'var(--success)' : 'var(--text-muted)' }}>
-              {(result.real_prob * 100).toFixed(2)}%
+              {(realProb * 100).toFixed(2)}%
             </span>
           </div>
           <div className="meta-item">
             <span className="meta-label">Fake Probability</span>
             <span className="meta-value" style={{ color: !isReal ? 'var(--danger)' : 'var(--text-muted)' }}>
-              {(result.fake_prob * 100).toFixed(2)}%
+              {(fakeProb * 100).toFixed(2)}%
             </span>
           </div>
         </div>
@@ -70,7 +73,7 @@ function VerificationResult({ result }) {
               Immutable Ledger Record
             </span>
             <span className={`proof-status ${result.onChain ? 'success' : 'pending'}`}>
-              {result.onChain ? 'CONFIRMED' : 'PENDING'}
+              {result.onChain ? 'CONFIRMED' : (result.onChainError ? 'FAILED' : 'PENDING')}
             </span>
           </div>
 
@@ -93,7 +96,9 @@ function VerificationResult({ result }) {
             ) : (
               <div className="tx-row">
                 <span className="tx-label">STATUS:</span>
-                <span className="tx-val" style={{ color: 'var(--text-dim)' }}>Waiting for DID signature...</span>
+                <span className="tx-val" style={{ color: result.onChainError ? 'var(--danger)' : 'var(--text-dim)' }}>
+                  {result.onChainError || result.pendingReason || 'Chưa gửi giao dịch ghi nhận lên blockchain'}
+                </span>
               </div>
             )}
           </div>
