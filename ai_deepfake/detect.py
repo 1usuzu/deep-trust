@@ -60,6 +60,15 @@ class DetectionResult:
     processing_time: float
     details: Dict[str, Any]
 
+    # Compatibility alias used by some API layers / older code
+    @property
+    def fake_prob(self) -> float:
+        return float(self.fake_probability)
+
+    @property
+    def real_prob(self) -> float:
+        return 1.0 - float(self.fake_probability)
+
     def to_dict(self):
         d = asdict(self)
         d['risk_level'] = self.risk_level.value
@@ -271,6 +280,3 @@ class DeepfakeDetector:
         except Exception as e:
             logger.error(f"Prediction Error: {e}")
             return DetectionResult(False, 0.0, 0.0, RiskLevel.LOW, 0.0, {"error": str(e)})
-
-# Khởi tạo instance
-detector = DeepfakeDetector()

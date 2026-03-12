@@ -33,6 +33,7 @@ contract DeepfakeVerification {
     
     event DIDRegistered(address indexed owner, string did, uint256 timestamp);
     event VerificationRecorded(bytes32 indexed imageHash, string subjectDid, bool isReal, uint256 confidence, uint256 timestamp);
+    event VerificationRecordedByIssuer(bytes32 indexed imageHash, address indexed subject, string subjectDid, bool isReal, uint256 confidence, uint256 timestamp);
     
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -159,6 +160,37 @@ contract DeepfakeVerification {
         
         totalVerifications++;
         emit VerificationRecorded(_imageHash, didDocuments[msg.sender].did, _isReal, _confidence, block.timestamp);
+    }
+
+    /**
+     * @notice Issuer (Oracle/Server) records a verification on-chain for a subject address.
+     *
+     * This is a simplified "end-to-end" demo path that does NOT require the subject to
+     * send a transaction (no MetaMask required). It trades off decentralization for UX.
+     *
+     * Access control: only authorized issuers can call.
+     */
+    function recordVerificationByIssuer(
+        address _subject,
+        bytes32 _imageHash,
+        string calldata _subjectDid,
+        bool _isReal,
+        uint256 _confidence
+    ) external {
+        require(authorizedIssuers[msg.sender], "Only authorized issuer");
+
+        verificationResults[_imageHash] = VerificationResult({
+            imageHash: _imageHash,
+            subjectDid: _subjectDid,
+            issuerDid: didDocuments[msg.sender].did,
+            isReal: _isReal,
+            confidence: _confidence,
+            timestamp: block.timestamp,
+            credentialHash: keccak256(abi.encodePacked(_subject, _imageHash, _subjectDid, _isReal, _confidence, block.timestamp))
+        });
+
+        totalVerifications++;
+        emit VerificationRecordedByIssuer(_imageHash, _subject, _subjectDid, _isReal, _confidence, block.timestamp);
     }
     
     // --- CÁC HÀM KHÁC (GIỮ NGUYÊN HOẶC RÚT GỌN) ---

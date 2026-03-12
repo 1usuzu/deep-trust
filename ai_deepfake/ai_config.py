@@ -4,26 +4,31 @@ ai_config.py - Cấu hình tập trung cho AI Module
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
+from pydantic import Field
+
+import torch
+
+def _resolve_device() -> str:
+    if os.environ.get("USE_GPU", "true").lower() != "true":
+        return "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+_default_model_dir = str(Path(__file__).parent / "models")
 
 class AISettings(BaseSettings):
-    # Cấu hình Model
-    MODEL_DIR: Path = Path(__file__).parent / "models"
-    DEVICE: str = "cuda" if os.environ.get("USE_GPU", "true").lower() == "true" else "cpu"
+    model_config = {"extra": "ignore"}
+
+    MODEL_DIR: Path = Field(default=Path(__file__).parent / "models")
+    DEVICE: str = Field(default_factory=_resolve_device)
     
-    # Cấu hình Deepfake Detection
     DEFAULT_THRESHOLD: float = 0.50
-    V1_WEIGHT: float = 0.4  # EfficientNet-B0
-    V2_WEIGHT: float = 0.6  # EfficientNet-B4
+    V1_WEIGHT: float = 0.4
+    V2_WEIGHT: float = 0.6
     
-    # Toggles
-    ENABLE_TTA: bool = True     # Test Time Augmentation (Tăng độ chính xác, giảm tốc độ)
+    ENABLE_TTA: bool = True
     ENABLE_SIGNAL_ANALYSIS: bool = True
-    
-    class Config:
-        env_file = ".env"  #  load từ file .env
 
 settings = AISettings()
 
-# Đảm bảo thư mục models tồn tại
 if not settings.MODEL_DIR.exists():
     print(f"Warning: Model directory not found at {settings.MODEL_DIR}")

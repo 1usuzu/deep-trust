@@ -1,0 +1,23 @@
+{# Panel: Check Image by Hash — client-side lookup via /verify/{hash} #}
+<div class="card">
+    <div class="card-title">
+        <i data-lucide="search" width="17" height="17"></i>
+        Tra cứu ảnh theo hash
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:18px">
+        Nhập hash SHA-256 của ảnh để tra cứu trạng thái xác thực từ kho công khai.
+    </p>
+    <div class="check-form-row">
+        <div class="field">
+            <label>Hash ảnh (SHA-256)</label>
+            <input type="text" id="hashInput" placeholder="vd: a3f2c8d1…"
+                style="font-family:'ui-monospace',monospace" />
+        </div>
+        <button class="btn-check" onclick="checkHash()">
+            <i data-lucide="search" width="14" height="14" style="vertical-align:middle"></i>
+            Tra cứu
+        </button>
+    </div>
+    {# Result injected by checkHash() in JS #}
+    <div id="checkResult" style="margin-top:16px;display:none"></div>
+</div>

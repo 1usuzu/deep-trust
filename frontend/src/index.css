@@ -2,43 +2,46 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap');
 
 :root {
-  /* Premium Dark Theme Palette */
-  --bg-deep: #020617;
-  /* Deepest Navy */
-  --bg-dark: #0f172a;
-  /* Slate 900 */
-  --surface: #1e293b;
-  /* Slate 800 */
-  --surface-light: #334155;
-  /* Slate 700 */
+  /* Light / Minimalist Theme */
+  --bg-deep: #f8fafc;
+  /* slate-50 — nền tổng thể */
+  --bg-dark: #f1f5f9;
+  /* slate-100 */
+  --surface: #ffffff;
+  /* card trắng */
+  --surface-light: #f8fafc;
+  /* slate-50 */
 
-  /* Vibrant Neons */
-  --primary: #0ea5e9;
-  /* Sky 500 */
-  --primary-glow: #0ea5e9;
-  --primary-dim: #0284c7;
+  /* Primary — Blue-600 (Web3/Security) */
+  --primary: #2563eb;
+  --primary-glow: #3b82f6;
+  --primary-dim: #1d4ed8;
 
-  --secondary: #d946ef;
-  /* Fuchsia 500 */
-  --secondary-glow: #d946ef;
+  /* Secondary / Accent */
+  --secondary: #7c3aed;
+  /* violet-700 */
+  --secondary-glow: #8b5cf6;
+  --accent: #6366f1;
+  /* indigo-500 */
 
-  --accent: #8b5cf6;
-  /* Violet 500 */
-
-  --success: #10b981;
-  /* Emerald 500 */
-  --danger: #f43f5e;
-  /* Rose 500 */
+  /* Status */
+  --success: #16a34a;
+  /* green-600 */
+  --danger: #dc2626;
+  /* red-600 */
 
   /* Text */
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #0f172a;
+  /* slate-900 */
+  --text-muted: #475569;
+  /* slate-600 */
+  --text-dim: #94a3b8;
+  /* slate-400 */
 
-  /* Glassmorphism */
-  --glass-bg: rgba(30, 41, 59, 0.4);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shine: rgba(255, 255, 255, 0.05);
+  /* Glass — white-based cho light mode */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.9);
 
   /* Spacing & Radius */
   --radius-sm: 8px;
@@ -46,11 +49,11 @@
   --radius-lg: 20px;
   --radius-xl: 32px;
 
-  /* Shadows */
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-  --glow-primary: 0 0 20px rgba(14, 165, 233, 0.3);
-  --glow-secondary: 0 0 20px rgba(217, 70, 239, 0.3);
+  /* Shadows — nhẹ hơn cho light mode */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+  --glow-primary: 0 0 20px rgba(37, 99, 235, 0.15);
+  --glow-secondary: 0 0 20px rgba(124, 58, 237, 0.1);
 }
 
 * {
@@ -66,10 +69,10 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
-  /* Dynamic Background */
+  /* Subtle light gradient tints */
   background-image:
-    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.1) 0%, transparent 40%);
+    radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.04) 0%, transparent 50%);
 }
 
 #root {

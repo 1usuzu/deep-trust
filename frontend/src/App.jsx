@@ -6,16 +6,7 @@ import VerificationResult from './components/VerificationResult'
 import BrowserZKProof from './lib/browser-proof'
 import './App.css'
 
-// SVGs for Pillars
-const ShieldIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-)
-const BrainIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
-)
-const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-)
+import { Shield, ScanFace, KeyRound } from 'lucide-react'
 
 const CONTRACT_ABI = [
   "function registerDID(string calldata _did, string calldata _publicKeyBase58) external",
@@ -182,7 +173,7 @@ function App() {
         return;
       }
       const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      
+
       setAccount(accounts[0]);
       setContract(contractInstance);
 
@@ -262,7 +253,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('user_address', account.toLowerCase());
-      
+
       // 1. Call AI + ZKP API
       const response = await fetch(`${API_URL}/api/verify-zkp`, {
         method: 'POST',
@@ -383,79 +374,108 @@ function App() {
     }
   };
 
+  const fmtAddr = (a) => a ? `${a.substring(0, 6)}…${a.slice(-4)}` : ''
+
   return (
     <div className="app">
       <div className="bg-glow-1"></div>
       <div className="bg-glow-2"></div>
 
+      {/* ── Header fixed ── */}
       <header className="header">
         <div className="header-content">
+          {/* Logo trái */}
           <div className="logo brand-font">
             <div className="logo-icon">
-              <ShieldIcon />
+              <Shield size={22} strokeWidth={2} />
             </div>
             <span className="logo-text">DeepTrust<span className="text-gradient">.AI</span></span>
           </div>
-          {/* Optional: Add status or smaller stats here */}
+
+          {/* Wallet pill — phải */}
+          <div className="header-nav">
+            {account ? (
+              <div className="wallet-pill">
+                <span className="wallet-dot"></span>
+                <span className="wallet-addr">{fmtAddr(account)}</span>
+                <button
+                  className="wallet-disconnect"
+                  onClick={() => { setAccount(null); setContract(null); setUserDID(null); }}
+                  title="Ngắt kết nối"
+                >✕</button>
+              </div>
+            ) : (
+              <button className="btn btn-primary header-connect-btn" onClick={connectWallet}>
+                Kết nối ví
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="main">
-        <div className="page-header">
-          <h1 className="page-title brand-font">
-            Trust <span className="text-gradient">But Verify</span>
-            <br /> in the Age of AI
-          </h1>
-          <p className="page-subtitle">
-            Secure, decentralized authentication powered by artificial intelligence and zero-knowledge proofs.
-          </p>
-        </div>
-
-        {/* 3 Pillars of the System */}
-        <div className="pillars-grid">
-          <div className="pillar-card pillar-did">
-            <div className="pillar-icon"><ShieldIcon /></div>
-            <h3 className="pillar-title">Decentralized Identity</h3>
-            <p className="pillar-desc">
-              Own your digital self. Cryptographic proof of personhood ensures you are in total control without central authorities.
+      {/* ── Section 1: Hero + Pillars — vừa 1 viewport ── */}
+      <section className="section-hero">
+        <div className="hero-body">
+          <div className="page-header">
+            <h1 className="page-title brand-font">
+              Trust <span className="text-gradient">But Verify</span>
+              <br /> in the Age of AI
+            </h1>
+            <p className="page-subtitle">
+              Secure, decentralized authentication powered by artificial intelligence and zero-knowledge proofs.
             </p>
           </div>
-          <div className="pillar-card pillar-ai">
-            <div className="pillar-icon"><BrainIcon /></div>
-            <h3 className="pillar-title">AI Deepfake Detection</h3>
-            <p className="pillar-desc">
-              State-of-the-art neural networks analyze micro-expressions to detect manipulated media with military-grade precision.
-            </p>
-          </div>
-          <div className="pillar-card pillar-zkp">
-            <div className="pillar-icon"><LockIcon /></div>
-            <h3 className="pillar-title">Zero-Knowledge Proofs</h3>
-            <p className="pillar-desc">
-              Verify authenticity mathematically without ever revealing your sensitive underlying biometric data.
-            </p>
+
+          <div className="pillars-grid">
+            <div className="pillar-card pillar-did">
+              <div className="pillar-icon"><Shield size={24} strokeWidth={1.5} /></div>
+              <h3 className="pillar-title">Decentralized Identity</h3>
+              <p className="pillar-desc">
+                Own your digital self. Cryptographic proof of personhood ensures you are in total control without central authorities.
+              </p>
+            </div>
+            <div className="pillar-card pillar-ai">
+              <div className="pillar-icon"><ScanFace size={24} strokeWidth={1.5} /></div>
+              <h3 className="pillar-title">AI Deepfake Detection</h3>
+              <p className="pillar-desc">
+                State-of-the-art neural networks analyze micro-expressions to detect manipulated media with military-grade precision.
+              </p>
+            </div>
+            <div className="pillar-card pillar-zkp">
+              <div className="pillar-icon"><KeyRound size={24} strokeWidth={1.5} /></div>
+              <h3 className="pillar-title">Zero-Knowledge Proofs</h3>
+              <p className="pillar-desc">
+                Verify authenticity mathematically without ever revealing your sensitive underlying biometric data.
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* Core Action Area: Split View */}
-        <div className="core-action-area">
-          <div className="sidebar-action">
-             <WalletConnect 
-              account={account} userDID={userDID}
-              onConnect={connectWallet} onDisconnect={() => {setAccount(null); setContract(null); setUserDID(null);}}
-              onRegisterDID={registerDID} loading={loading}
-              stats={stats}
-            />
-          </div>
+      {/* ── Section 2: Action — cuộn xuống ── */}
+      <section className="section-action">
+        <div className="action-body">
+          <div className="core-action-area">
+            <div className="sidebar-action">
+              <WalletConnect
+                account={account} userDID={userDID}
+                onConnect={connectWallet}
+                onDisconnect={() => { setAccount(null); setContract(null); setUserDID(null); }}
+                onRegisterDID={registerDID} loading={loading}
+                stats={stats}
+              />
+            </div>
 
-          <div className="main-action">
-            <ImageUpload onUpload={verifyImage} loading={loading} />
-            {loading && loadingMessage && (
-              <p style={{ marginTop: '12px', color: 'var(--text-muted)' }}>{loadingMessage}</p>
-            )}
-            {verificationResult && (<VerificationResult result={verificationResult} />)}
+            <div className="main-action">
+              <ImageUpload onUpload={verifyImage} loading={loading} />
+              {loading && loadingMessage && (
+                <p style={{ marginTop: '12px', color: 'var(--text-muted)' }}>{loadingMessage}</p>
+              )}
+              {verificationResult && (<VerificationResult result={verificationResult} />)}
+            </div>
           </div>
         </div>
-      </main>
+      </section>
     </div>
   )
 }

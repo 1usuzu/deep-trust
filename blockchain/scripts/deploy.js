@@ -43,6 +43,10 @@ async function main() {
     JSON.stringify(deploymentInfo, null, 2)
   );
   console.log("\nDeployment info saved to deployment.json");
+  console.log("\nBackend env hint:");
+  console.log(`  CONTRACT_ADDRESS=${contractAddress}`);
+  console.log(`  RPC_URL=${rpcUrl}`);
+  console.log(`  CHAIN_ID=${chainId}`);
 
   // Auto-update frontend .env
   const envPath = path.join(__dirname, "../../frontend/.env");

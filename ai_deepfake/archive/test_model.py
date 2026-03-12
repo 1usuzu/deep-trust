@@ -126,7 +126,7 @@ def test_ensemble(threshold: float = 0.5):
     print("Testing Ensemble Detector")
     print("=" * 60)
     
-    detector = DeepfakeDetector(threshold=threshold)
+    detector = DeepfakeDetector()
     
     test_dir = Path(__file__).parent / 'dataset_final' / 'test'
     fake_images = list((test_dir / 'fake').glob('*'))
@@ -140,7 +140,7 @@ def test_ensemble(threshold: float = 0.5):
     all_images = [(p, True) for p in fake_images] + [(p, False) for p in real_images]
     
     for img_path, is_fake_actual in tqdm(all_images, desc="Testing"):
-        result = detector.detect(str(img_path))
+        result = detector.predict(str(img_path))
         
         if is_fake_actual and result.is_fake: tp += 1
         elif not is_fake_actual and not result.is_fake: tn += 1
@@ -198,7 +198,7 @@ def find_optimal_threshold():
     print("Finding Optimal Threshold")
     print("="*60)
     
-    detector = DeepfakeDetector(threshold=0.5)
+    detector = DeepfakeDetector()
     
     test_dir = Path(__file__).parent / 'dataset_final' / 'test'
     fake_images = list((test_dir / 'fake').glob('*'))
@@ -214,8 +214,8 @@ def find_optimal_threshold():
     all_images = [(p, True) for p in fake_images] + [(p, False) for p in real_images]
     
     for img_path, is_fake_actual in tqdm(all_images, desc="Predicting"):
-        result = detector.detect(str(img_path))
-        all_probs.append(result.fake_probability)
+        result = detector.predict(str(img_path))
+        all_probs.append(result.fake_prob)
         all_labels.append(is_fake_actual)
     
     print()

@@ -49,6 +49,7 @@ except ImportError:
     DETECTOR_VERSION = "none"
 
 from zkp_oracle import ZKPOracle
+from blockchain_client import BlockchainClient
 
 # DID System imports - optional, will work without if not installed
 try:
@@ -73,11 +74,12 @@ ALLOW_CREDENTIALS = "*" not in ALLOWED_ORIGINS
 detector = None
 zkp_oracle = None
 did_service = None
+blockchain_client = None
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global detector, zkp_oracle, did_service
+    global detector, zkp_oracle, did_service, blockchain_client
     print("Starting Deepfake Verification API...")
     print(f"Detector version: {DETECTOR_VERSION}")
 
@@ -95,12 +97,17 @@ async def lifespan(app: FastAPI):
             "SERVER_PRIVATE_KEY is required. Set it in environment before starting backend."
         )
     
+    print(f"Python executable: {sys.executable}")
+    
     # Initialize AI Detector
     if DeepfakeDetector is not None:
         model_dir = Path(__file__).parent.parent / "ai_deepfake" / "models"
         if (model_dir / "best_model.pth").exists():
-            detector = DeepfakeDetector()  # Singleton, không cần tham số
-            print("Ensemble AI Detector initialized (EfficientNet-B0 + B4)")
+            try:
+                detector = DeepfakeDetector()
+                print("AI Detector initialized")
+            except Exception as e:
+                print(f"AI Detector initialization failed: {e}")
         else:
             print(f"Model not found at {model_dir}")
     else:
@@ -110,6 +117,17 @@ async def lifespan(app: FastAPI):
     zkp_oracle = ZKPOracle(SERVER_PRIVATE_KEY)
     print(f"ZKP Oracle initialized (Address: {zkp_oracle.oracle_address})")
     
+    # Initialize Blockchain client (optional)
+    try:
+        blockchain_client = BlockchainClient.from_env(SERVER_PRIVATE_KEY)
+        if blockchain_client:
+            print("Blockchain client initialized")
+        else:
+            print("Blockchain client disabled (RPC_URL/CHAIN_ID/CONTRACT_ADDRESS not set)")
+    except Exception as e:
+        print(f"Warning: Blockchain client initialization failed: {e}")
+        blockchain_client = None
+
     # Initialize DID Service
     if DID_AVAILABLE:
         try:
@@ -121,6 +139,7 @@ async def lifespan(app: FastAPI):
     
     yield
     print("Shutting down...")
+    detector = None
 
 app = FastAPI(title="Deepfake Verification API", version="1.0.0", lifespan=lifespan)
 
@@ -131,6 +150,55 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Consumer API router (/v1/consumer/*)
+from consumer_api import router as consumer_router
+app.include_router(consumer_router)
+
+@app.get("/api/health")
+async def health_check():
+    """System health check"""
+    return {
+        "status": "ok",
+        "detector": detector is not None,
+        "detector_version": DETECTOR_VERSION,
+        "zkp_oracle": zkp_oracle is not None,
+        "did_service": did_service is not None,
+        "blockchain": blockchain_client is not None,
+        "python": sys.executable
+    }
+
+
+# ============================================================
+# BLOCKCHAIN ENDPOINTS - On-chain recording (no MetaMask required)
+# ============================================================
+@app.post("/api/blockchain/record")
+async def blockchain_record(
+    image_hash: str = Form(...),        # 64 hex chars (sha256)
+    user_address: str = Form(...),      # subject address (0x...)
+    subject_did: str = Form(default=""),
+    is_real: bool = Form(default=True),
+    confidence: float = Form(default=1.0),
+):
+    """
+    Record verification result on-chain using server/issuer key (custodial tx).
+
+    This is for end-to-end demo without requiring users to have MetaMask.
+    """
+    if blockchain_client is None:
+        raise HTTPException(status_code=503, detail="Blockchain client not configured")
+
+    try:
+        tx_hash = blockchain_client.record_verification_by_issuer(
+            subject_address=user_address,
+            image_hash_hex=image_hash,
+            subject_did=subject_did,
+            is_real=is_real,
+            confidence=confidence,
+        )
+        return {"ok": True, "tx_hash": tx_hash}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/verify")
 async def verify_image(
@@ -194,9 +262,12 @@ async def verify_image(
             "risk_level": result.get("risk_level", "unknown")
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal verification error")
         
     finally:
         if temp_file and os.path.exists(temp_file.name):
@@ -297,9 +368,12 @@ async def verify_image_zkp(
             "signature": signature
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal verification error")
         
     finally:
         if temp_file and os.path.exists(temp_file.name):
@@ -450,9 +524,12 @@ async def issue_credential(
             "signature": signature
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal verification error")
         
     finally:
         if temp_file and os.path.exists(temp_file.name):

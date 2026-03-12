@@ -35,8 +35,8 @@ from datetime import datetime
 
 CONFIG = {
     # Paths
-    'dataset_path': 'd:/Code/face/ai_deepfake/dataset_final',
-    'output_dir': 'd:/Code/face/ai_deepfake/models',
+    'dataset_path': 'd:/Codes/test_face/ai_deepfake/dataset_final',
+    'output_dir': 'd:/Codes/test_face/ai_deepfake/models',
     
     # Model
     'model_name': 'efficientnet_b4',  # Upgraded from B0

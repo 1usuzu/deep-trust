@@ -8,8 +8,8 @@ Thêm các endpoints hỗ trợ Zero-Knowledge Proof:
 """
 
 import hashlib
+import hmac
 import json
-from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
 from eth_account import Account
@@ -56,8 +56,12 @@ class ZKPOracle:
         """
         # Tạo oracle_secret = hash(image_hash, is_real, private_key_derived)
         # Sử dụng HMAC-SHA256 với private key làm secret
-        secret_input = f"{image_hash}:{is_real}:{timestamp}:{self.private_key[-16:]}"
-        oracle_secret = hashlib.sha256(secret_input.encode()).hexdigest()
+        secret_input = f"{image_hash}:{is_real}:{timestamp}"
+        oracle_secret = hmac.new(
+            self.private_key.encode(),
+            secret_input.encode(),
+            hashlib.sha256
+        ).hexdigest()
         
         return ZKPInput(
             image_hash=image_hash,

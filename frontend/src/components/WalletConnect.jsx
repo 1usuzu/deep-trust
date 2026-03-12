@@ -1,11 +1,25 @@
 import './WalletConnect.css'
 
+const CONSUMER_APP_URL = import.meta.env.VITE_CONSUMER_APP_URL || 'http://localhost:8001'
+
 function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDID, loading, stats }) {
 
   const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  };
+    if (!address) return ''
+    return `${address.substring(0, 6)}…${address.substring(address.length - 4)}`
+  }
+
+  const copyDID = () => {
+    if (userDID?.did) {
+      navigator.clipboard.writeText(userDID.did).then(() => alert('DID copied to clipboard!'))
+    }
+  }
+
+  const openProfile = () => {
+    if (account) {
+      window.open(`${CONSUMER_APP_URL}/api/health`, '_blank')
+    }
+  }
 
   return (
     <div className="wallet-connect">
@@ -17,13 +31,13 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
             </svg>
           </div>
           <h3 className="connect-title brand-font">Connect Wallet</h3>
-          <p className="connect-desc">Connect your MetaMask to establish your decentralized identity and secure verifictions.</p>
+          <p className="connect-desc">Connect your MetaMask to establish your decentralized identity and enable blockchain-verified results.</p>
           <button className="btn btn-primary" onClick={onConnect}>
             Connect MetaMask
           </button>
 
           {stats && (
-            <div className="stats-mini-grid" style={{ width: '100%', marginTop: '40px', opacity: 0.7 }}>
+            <div className="stats-mini-grid" style={{ width: '100%', marginTop: '32px' }}>
               <div className="stat-item">
                 <span className="stat-val">{stats.totalDIDs || 0}</span>
                 <span className="stat-lbl">Identities</span>
@@ -37,6 +51,7 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
         </div>
       ) : (
         <div className="connected-section glass-panel">
+          {/* ── Wallet card ── */}
           <div className="user-card">
             <div className="user-header">
               <div className="user-avatar">
@@ -45,43 +60,92 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
                 </svg>
               </div>
               <div className="user-info">
-                <span className="user-label">Connected As</span>
+                <span className="user-label">Connected Wallet</span>
                 <span className="user-address">{formatAddress(account)}</span>
               </div>
             </div>
-            <button className="disconnect-btn" onClick={onDisconnect}>
-              Disconnect Wallet
-            </button>
+            <button className="disconnect-btn" onClick={onDisconnect}>Disconnect</button>
           </div>
 
+          {/* ── DID card ── */}
           <div className={`did-status-card ${userDID ? 'active' : ''}`}>
             <div className="did-header">
               <span className="did-title">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Digital ID
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Decentralized Identity
               </span>
               <span className={`status-badge ${userDID ? 'verified' : 'unverified'}`}>
-                {userDID ? 'Verified' : 'Unregistered'}
+                {userDID ? '✓ Active' : 'Not registered'}
               </span>
             </div>
 
             {userDID ? (
               <>
                 <div className="did-value">{userDID.did}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '8px' }}>Unique Identity Active</div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                  <button
+                    onClick={copyDID}
+                    style={{
+                      flex: 1, padding: '6px 0', fontSize: '.78rem', fontWeight: 600,
+                      color: 'var(--primary)', background: 'rgba(37,99,235,.1)',
+                      border: 'none', borderRadius: '7px', cursor: 'pointer',
+                    }}
+                  >
+                    Copy DID
+                  </button>
+                  <a
+                    href={`${CONSUMER_APP_URL}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '6px 0', fontSize: '.78rem', fontWeight: 600,
+                      color: 'var(--text-muted)', background: 'rgba(255,255,255,.1)',
+                      border: '1px solid rgba(255,255,255,.15)', borderRadius: '7px',
+                      cursor: 'pointer', textDecoration: 'none',
+                    }}
+                  >
+                    View Portal ↗
+                  </a>
+                </div>
+                <div style={{ fontSize: '.75rem', color: 'var(--success)', marginTop: '8px', textAlign: 'center' }}>
+                  ● Identity active — on-chain verification enabled
+                </div>
               </>
             ) : (
               <>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  Register a DID to enable blockchain recording of your AI verifications.
+                <p style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                  Register a DID to enable blockchain recording of your AI verifications and share verification links.
                 </p>
-                <button className="btn btn-primary" style={{ width: '100%' }} onClick={onRegisterDID} disabled={loading}>
-                  {loading ? 'Registering...' : 'Register Identity'}
+
+                {/* Benefit list */}
+                <ul style={{ fontSize: '.8rem', color: 'var(--text-muted)', listStyle: 'none', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    'Record results permanently on-chain',
+                    'Generate public verification links',
+                    'Issue Verifiable Credentials',
+                  ].map(b => (
+                    <li key={b} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: 'var(--success)', fontWeight: 700 }}>✓</span> {b}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={onRegisterDID}
+                  disabled={loading}
+                >
+                  {loading ? 'Registering…' : 'Register Identity (Free)'}
                 </button>
               </>
             )}
           </div>
 
+          {/* ── Platform stats ── */}
           {stats && (
             <div className="stats-mini-grid">
               <div className="stat-item">
@@ -97,7 +161,7 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
         </div>
       )}
     </div>
-  );
+  )
 }
 
-export default WalletConnect;
+export default WalletConnect

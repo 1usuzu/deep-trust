@@ -1,0 +1,27 @@
+{# Stats summary row — 6 cards #}
+<div class="stats-row">
+    <div class="stat-card s-total">
+        <div class="s-label">Tổng đã xác thực</div>
+        <div class="s-val">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card s-real">
+        <div class="s-label">REAL</div>
+        <div class="s-val">{{ stats.real }}</div>
+    </div>
+    <div class="stat-card s-fake">
+        <div class="s-label">FAKE</div>
+        <div class="s-val">{{ stats.fake }}</div>
+    </div>
+    <div class="stat-card s-ok">
+        <div class="s-label">Duyệt</div>
+        <div class="s-val">{{ stats.approved }}</div>
+    </div>
+    <div class="stat-card s-rev">
+        <div class="s-label">Cần xem lại</div>
+        <div class="s-val">{{ stats.review }}</div>
+    </div>
+    <div class="stat-card s-rej">
+        <div class="s-label">Từ chối</div>
+        <div class="s-val">{{ stats.rejected }}</div>
+    </div>
+</div>

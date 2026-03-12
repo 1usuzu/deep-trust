@@ -5,6 +5,27 @@ const path = require("path");
 async function main() {
     console.log("Deploying ZK Deepfake Verification Contracts...\n");
 
+    // Auto-copy ZK contracts from zkp/contracts/ to blockchain/contracts/ if needed
+    const zkpContractsDir = path.join(__dirname, "../../zkp/contracts");
+    const hhContractsDir = path.join(__dirname, "../contracts");
+    
+    const requiredContracts = ["Groth16Verifier.sol", "ZKDeepfakeVerification.sol"];
+    for (const contractFile of requiredContracts) {
+        const src = path.join(zkpContractsDir, contractFile);
+        const dst = path.join(hhContractsDir, contractFile);
+        if (fs.existsSync(src) && !fs.existsSync(dst)) {
+            fs.copyFileSync(src, dst);
+            console.log(`  Copied ${contractFile} from zkp/contracts/`);
+        }
+    }
+    
+    // Check Groth16Verifier exists
+    if (!fs.existsSync(path.join(hhContractsDir, "Groth16Verifier.sol"))) {
+        console.error("❌ Groth16Verifier.sol not found!");
+        console.error("   Run: cd zkp && node scripts/export-verifier.js");
+        process.exit(1);
+    }
+
     const [deployer] = await hre.ethers.getSigners();
     console.log("Deployer:", deployer.address);
 

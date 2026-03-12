@@ -221,6 +221,7 @@ ALLOW_INSECURE_DEV_KEY=false
 | ------ | ------------- | --------------------------------- |
 | POST   | `/api/verify` | Xác thực ảnh deepfake + ký Oracle |
 | POST   | `/api/verify-zkp` | Xác thực + tạo ZKP input |
+| POST   | `/api/blockchain/record` | Ghi kết quả lên blockchain (server ký tx, không cần MetaMask) |
 | GET    | `/api/zkp-info` | Thông tin ZKP system |
 | POST   | `/api/did/create` | Tạo DID mới |
 | GET    | `/api/did/resolve/{did}` | Resolve DID Document |
@@ -228,6 +229,21 @@ ALLOW_INSECURE_DEV_KEY=false
 | POST   | `/api/credential/issue` | Xác thực + cấp Verifiable Credential |
 | POST   | `/api/credential/verify` | Xác thực Verifiable Credential |
 | GET    | `/api/did/info` | Thống kê DID system |
+
+### Blockchain end-to-end (server ký — không cần MetaMask)
+
+Backend có thể gửi transaction lên smart contract bằng `SERVER_PRIVATE_KEY` (custodial tx) để demo end-to-end.
+
+Yêu cầu cấu hình trong `backend/.env`:
+
+```env
+RPC_URL=http://127.0.0.1:8545
+CHAIN_ID=31337
+CONTRACT_ADDRESS=0x...
+SERVER_PRIVATE_KEY=0x...
+```
+
+Consumer portal (`consumer_app`) có checkbox “Ghi lên Blockchain” và sẽ tự lưu `tx_hash` vào audit.
 
 ### Request
 
