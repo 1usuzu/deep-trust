@@ -114,25 +114,47 @@ function VerificationResult({ result }) {
           </div>
         </div>
 
-        {/* Verification Link */}
+        {/* Portal Link — Xem trên Consumer Portal */}
         {verificationLink && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
+            display: 'flex', flexDirection: 'column', gap: '8px',
             background: 'rgba(37,99,235,.05)', border: '1px solid rgba(37,99,235,.15)',
-            borderRadius: '9px', padding: '10px 13px', marginBottom: '12px',
+            borderRadius: '9px', padding: '12px 14px', marginBottom: '12px',
           }}>
-            <svg width="14" height="14" fill="none" stroke="var(--primary)" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
-            <a
-              href={verificationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontSize: '.82rem', color: 'var(--primary)', wordBreak: 'break-all', flex: 1, textDecoration: 'none' }}
-            >
-              {verificationLink}
-            </a>
-            <CopyButton text={verificationLink} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <svg width="16" height="16" fill="none" stroke="var(--primary)" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span style={{ fontSize: '.85rem', fontWeight: 600, color: 'var(--primary)' }}>
+                Xem trên Portal
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <a
+                href={verificationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: '.78rem', color: 'var(--primary)', wordBreak: 'break-all', flex: 1,
+                  textDecoration: 'none', opacity: 0.9,
+                }}
+              >
+                {verificationLink}
+              </a>
+              <CopyButton text={verificationLink} />
+            </div>
+            {result.transactionHash && (
+              <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Hoặc tra cứu theo TX: <a
+                  href={`${CONSUMER_APP_URL}?tx=${result.transactionHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', textDecoration: 'none' }}
+                >
+                  {result.transactionHash.substring(0, 20)}…
+                </a>
+              </div>
+            )}
           </div>
         )}
 

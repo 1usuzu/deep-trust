@@ -178,6 +178,17 @@ def fetch_recent(limit: int = 20, label_filter: str = "") -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def fetch_audit_by_tx_hash(tx_hash: str) -> dict | None:
+    """Fetch audit record by blockchain transaction hash."""
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT * FROM verification_audit WHERE tx_hash = ? ORDER BY id DESC LIMIT 1",
+        (tx_hash,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def fetch_audit_latest_by_hash(image_hash: str) -> dict | None:
     conn = _get_conn()
     row = conn.execute(
@@ -350,7 +361,84 @@ async def _call_health() -> dict:
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request, filter: str = ""):
+async def index(request: Request, filter: str = "", hash: str = "", tx: str = ""):
+    """
+    Portal chính — có thể nhận query ?hash=xxx hoặc ?tx=xxx từ frontend
+    để tự động tra cứu và hiển thị kết quả đã verify.
+    """
+    result_payload = None
+    error_message = None
+    
+    # Nếu có hash hoặc tx từ frontend → tự động tra cứu
+    if hash or tx:
+        try:
+            if hash:
+                # Tra cứu theo image_hash
+                data = await _call_image_status_public(hash)
+                if data.get("found"):
+                    # Lấy thêm audit local nếu có
+                    audit = fetch_audit_latest_by_hash(hash)
+                    if audit:
+                        result_payload = {
+                            "filename": audit.get("filename", ""),
+                            "label": audit.get("label", data.get("label", "UNKNOWN")),
+                            "model_confidence": float(audit.get("model_confidence", data.get("confidence", 0.0))),
+                            "real_score": float(audit.get("real_score", data.get("real_prob", 0.0))),
+                            "fake_score": float(audit.get("fake_score", data.get("fake_prob", 0.0))),
+                            "risk_level": audit.get("risk_level", data.get("risk_level", "unknown")),
+                            "decision": audit.get("decision", data.get("decision", "UNKNOWN")),
+                            "reason": audit.get("reason", data.get("reason", "")),
+                            "image_hash": hash,
+                            "verification_link": f"/verify/{hash}",
+                            "external_id": audit.get("external_id", ""),
+                            "tx_hash": audit.get("tx_hash"),
+                            "user_did": audit.get("user_did"),
+                            "vc_status": audit.get("vc_status"),
+                            "zkp_status": audit.get("zkp_status"),
+                            "credential_id": audit.get("credential_id"),
+                        }
+                    else:
+                        # Chỉ có data từ Core API
+                        result_payload = {
+                            "label": data.get("label", "UNKNOWN"),
+                            "model_confidence": float(data.get("confidence", 0.0)),
+                            "real_score": float(data.get("real_prob", 0.0)),
+                            "fake_score": float(data.get("fake_prob", 0.0)),
+                            "risk_level": data.get("risk_level", "unknown"),
+                            "decision": data.get("decision", "UNKNOWN"),
+                            "reason": data.get("reason", ""),
+                            "image_hash": hash,
+                            "verification_link": f"/verify/{hash}",
+                        }
+                else:
+                    error_message = f"Không tìm thấy bản ghi xác thực cho hash: {hash}"
+            elif tx:
+                # Tra cứu theo tx_hash (từ audit local)
+                audit = fetch_audit_by_tx_hash(tx)
+                if audit:
+                    result_payload = {
+                        "filename": audit.get("filename", ""),
+                        "label": audit.get("label", "UNKNOWN"),
+                        "model_confidence": float(audit.get("model_confidence", 0.0)),
+                        "real_score": float(audit.get("real_score", 0.0)),
+                        "fake_score": float(audit.get("fake_score", 0.0)),
+                        "risk_level": audit.get("risk_level", "unknown"),
+                        "decision": audit.get("decision", "UNKNOWN"),
+                        "reason": audit.get("reason", ""),
+                        "image_hash": audit.get("image_hash", ""),
+                        "verification_link": f"/verify/{audit.get('image_hash', '')}",
+                        "external_id": audit.get("external_id", ""),
+                        "tx_hash": tx,
+                        "user_did": audit.get("user_did"),
+                        "vc_status": audit.get("vc_status"),
+                        "zkp_status": audit.get("zkp_status"),
+                        "credential_id": audit.get("credential_id"),
+                    }
+                else:
+                    error_message = f"Không tìm thấy bản ghi xác thực cho transaction: {tx}"
+        except Exception as exc:
+            error_message = f"Lỗi tra cứu: {str(exc)}"
+    
     health = await _call_health()
     return templates.TemplateResponse("index.html", {
         "request":            request,
@@ -362,6 +450,8 @@ async def index(request: Request, filter: str = ""):
         "health":             health,
         "active_filter":      filter.upper(),
         "app_title":          APP_TITLE,
+        "result":             result_payload,
+        "error":              error_message,
     })
 
 
