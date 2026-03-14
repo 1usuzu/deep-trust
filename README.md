@@ -68,14 +68,14 @@ Hệ thống kết hợp 3 công nghệ chính:
 - CUDA (khuyến nghị, để chạy AI trên GPU)
 - MetaMask extension
 
-### 1. Clone và cài đặt dependencies
+### 1. Cài đặt môi trường chung (Chạy 1 lần duy nhất)
 
 ```bash
 # Clone project
 git clone <repository-url>
 cd face
 
-# Tạo Python virtual environment
+# Tạo Python virtual environment (Dành cho Backend)
 python -m venv .venv
 .venv\Scripts\activate  # Windows
 # source .venv/bin/activate  # Linux/Mac
@@ -83,75 +83,72 @@ python -m venv .venv
 # Cài đặt Python dependencies
 pip install torch torchvision fastapi uvicorn python-multipart pillow cryptography base58 web3 eth-account
 
-# Cài đặt Frontend dependencies
-cd frontend
-npm install
-cd ..
-
 # Cài đặt Blockchain dependencies
 cd blockchain
 npm install
 cd ..
+
+# Cài đặt Frontend dependencies (Bao gồm Main App + Consumer App)
+cd frontend
+npm install buffer react-router-dom vite-plugin-node-polyfills
+npm install
+cd ..
 ```
+
+---
 
 ## Chạy ứng dụng (Local Development)
 
-Mở **3 terminal riêng biệt** và chạy theo thứ tự:
+Quy trình sử dụng **3 Terminal** chạy song song:
 
-### Terminal 1: Blockchain (Hardhat Node)
+### 🪟 Terminal 1: Mạng Blockchain Cục Bộ (Hardhat Node)
 
 ```bash
 cd blockchain
 npx hardhat node
 ```
 
-Hardhat sẽ hiển thị danh sách accounts. **Lưu lại Account #0**:
+Hardhat sẽ hiển thị danh sách accounts. **Lưu lại Private Key của Account #0** (sử dụng trên Backend để làm Oracle Node ký giao dịch).
 
-- Address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
-- Private Key: copy từ output của `npx hardhat node`
-
-### Terminal 2: Deploy Contract
-
+*(Chỉ làm 1 lần lúc mới bật)* Mở thêm 1 terminal phụ để Deploy Contract:
 ```bash
 cd blockchain
 npx hardhat run scripts/deploy.js --network localhost
 ```
+Copy địa chỉ contract được mổ ra (ví dụ: `0x5FbDB2315678afecb367f032d93F642f64180aa3`). Mình sẽ cần để gán vào `.env` của Frontend lúc sau.
 
-Copy địa chỉ contract được hiển thị (ví dụ: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`)
-
-### Terminal 3: Backend API
+### 🪟 Terminal 2: Khởi chạy Backend API (Core API + Oracle)
 
 ```bash
+.venv\Scripts\activate  # Nhớ active venv
+
 # Thiết lập biến môi trường (dùng Private Key của Account #0 lấy từ output Hardhat)
 $env:SERVER_PRIVATE_KEY = "<YOUR_HARDHAT_ACCOUNT_0_PRIVATE_KEY>"
+$env:ALLOW_INSECURE_DEV_KEY = "true"
+$env:INSECURE_DEV_PRIVATE_KEY = "<YOUR_HARDHAT_ACCOUNT_0_PRIVATE_KEY>"
 
 cd backend
 python -m uvicorn api:app --reload --port 8000
 ```
 
-### Terminal 4: Frontend
+### 🪟 Terminal 3: Khởi chạy Giao diện Frontend (Main + Consumer App)
 
+Tạo file `frontend/.env`:
+```env
+VITE_CONTRACT_ADDRESS=<Địa_chỉ_contract_vừa_deploy_lúc_nãy>
+VITE_API_URL=http://localhost:8000
+VITE_CHAIN_ID=31337
+```
+
+Bật server giao diện MPA:
 ```bash
 cd frontend
 npm run dev
 ```
 
-### Cấu hình Frontend (.env)
-
-Tạo file `frontend/.env`:
-
-```env
-VITE_CONTRACT_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-VITE_API_URL=http://localhost:8000
-VITE_CHAIN_ID=31337
-```
-
-**Thay `VITE_CONTRACT_ADDRESS` bằng địa chỉ contract bạn vừa deploy.**
-
 ### Cấu hình MetaMask
 
 1. **Thêm Network mới:**
-
    - Network Name: `Hardhat Local`
    - RPC URL: `http://127.0.0.1:8545`
    - Chain ID: `31337`
@@ -159,15 +156,12 @@ VITE_CHAIN_ID=31337
 
 2. **Import Account #0:**
    - Vào MetaMask > Import Account
-  - Paste Private Key: dùng key Account #0 từ output `npx hardhat node`
+   - Paste Private Key: dùng key Account #0 từ output Hardhat.
 
-### Sử dụng ứng dụng
+### Trải Nghiệm Sử dụng Toàn Diện
 
-1. Truy cập `http://localhost:5173`
-2. Click "Connect Wallet" và chọn account vừa import
-3. Click "Register DID" để đăng ký định danh
-4. Upload ảnh để xác thực Deepfake
-5. Kết quả sẽ được AI phân tích và lưu lên blockchain
+1. **Main App (Identity Provider)**: Truy cập `http://localhost:5173/` để kết nối Ví Metamask, verify khuôn mặt, tải \`proof.json & public.json\` về máy.
+2. **Consumer App (DApp Bầu Cử)**: Truy cập `http://localhost:5173/consumer/` để đăng nhập với tư cách cử tri vô danh. Gửi bằng chứng ZKP mà không cần lộ mặt.
 
 ## Deploy lên Testnet (Polygon Amoy)
 

@@ -1,5 +1,5 @@
 /* Global Reset & Variables */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;700;800&display=swap&subset=vietnamese');
 
 :root {
   /* Light / Minimalist Theme */
@@ -87,7 +87,7 @@ h2,
 h3,
 h4,
 .brand-font {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   letter-spacing: -0.025em;
 }
 

@@ -6,16 +6,16 @@ const getExplorerUrl = (txHash) => {
   const chainId = import.meta.env.VITE_CHAIN_ID
   const map = {
     '11155111': `https://sepolia.etherscan.io/tx/${txHash}`,
-    '80002':    `https://amoy.polygonscan.com/tx/${txHash}`,
-    '31337':    null,
+    '80002': `https://amoy.polygonscan.com/tx/${txHash}`,
+    '31337': null,
   }
   return map[chainId] ?? null
 }
 
 const RISK_COLOR = {
-  low:      'var(--success)',
-  medium:   'var(--warn)',
-  high:     'var(--danger)',
+  low: 'var(--success)',
+  medium: 'var(--warn)',
+  high: 'var(--danger)',
   critical: '#7c3aed',
 }
 
@@ -39,17 +39,39 @@ function CopyButton({ text }) {
 }
 
 function VerificationResult({ result }) {
-  const isReal         = result.label === 'REAL'
-  const realProb       = Number(result.real_prob ?? 0)
-  const fakeProb       = Number(result.fake_prob ?? 0)
+  const isReal = result.label === 'REAL'
+  const realProb = Number(result.real_prob ?? 0)
+  const fakeProb = Number(result.fake_prob ?? 0)
   const confidenceScore = isReal ? realProb : fakeProb
-  const confidence     = (Math.max(0, Math.min(1, confidenceScore)) * 100).toFixed(1)
-  const riskLevel      = result.risk_level || (isReal ? 'low' : 'high')
-  const riskColor      = RISK_COLOR[riskLevel] || 'var(--text-muted)'
+  const confidence = (Math.max(0, Math.min(1, confidenceScore)) * 100).toFixed(1)
+  const riskLevel = result.risk_level || (isReal ? 'low' : 'high')
+  const riskColor = RISK_COLOR[riskLevel] || 'var(--text-muted)'
 
   // verification_link: either from API result, or construct from consumer app URL + image_hash
   const verificationLink = result.verification_link
     || (result.image_hash ? `${CONSUMER_APP_URL}/verify/${result.image_hash}` : null)
+
+  const downloadZkpFiles = () => {
+    if (!result.zkp || result.zkp.error) return;
+
+    const proofData = JSON.stringify(result.zkp.proof, null, 2);
+    const publicData = JSON.stringify(result.zkp.publicSignals, null, 2);
+
+    const downloadFile = (filename, content) => {
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    downloadFile('proof.json', proofData);
+    setTimeout(() => downloadFile('public.json', publicData), 100);
+  };
 
   return (
     <div className={`verification-result ${isReal ? 'real' : 'fake'}`}>
@@ -201,21 +223,42 @@ function VerificationResult({ result }) {
           </div>
         </div>
 
-        {/* ZKP proof indicator */}
         {result.zkp && (
           <div style={{
-            marginTop: '10px', padding: '10px 13px',
-            background: 'rgba(124,58,237,.05)', border: '1px solid rgba(124,58,237,.15)',
-            borderRadius: '9px', fontSize: '.82rem', color: '#7c3aed',
-            display: 'flex', alignItems: 'center', gap: '7px',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+            marginTop: '10px'
           }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-            {result.zkp.error
-              ? `ZK Proof failed: ${result.zkp.error}`
-              : `Zero-Knowledge Proof generated — commitment: ${String(result.zkp.commitment).substring(0, 20)}…`
-            }
+            <div style={{
+              padding: '10px 13px',
+              background: 'rgba(124,58,237,.05)', border: '1px solid rgba(124,58,237,.15)',
+              borderRadius: '9px', fontSize: '.82rem', color: '#7c3aed',
+              display: 'flex', alignItems: 'center', gap: '7px',
+            }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              {result.zkp.error
+                ? `ZK Proof failed: ${result.zkp.error}`
+                : `ZK Proof generated — commitment: ${String(result.zkp.commitment).substring(0, 20)}…`
+              }
+            </div>
+
+            {!result.zkp.error && (
+              <button
+                onClick={downloadZkpFiles}
+                style={{
+                  background: '#7c3aed', color: '#fff', border: 'none',
+                  padding: '8px 12px', borderRadius: '6px', cursor: 'pointer',
+                  fontWeight: 600, fontSize: '0.85rem', alignSelf: 'flex-start',
+                  display: 'flex', alignItems: 'center', gap: '6px'
+                }}
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Tải Bằng Chứng ZKP (proof.json & public.json)
+              </button>
+            )}
           </div>
         )}
       </div>

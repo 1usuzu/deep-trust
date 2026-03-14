@@ -147,24 +147,38 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-bottom: 16px;
 }
 
 .did-title {
-    font-weight: 600;
+    font-size: 1.15rem;
+    font-weight: 700;
     color: var(--text-main);
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1 1 220px;
+    min-width: 0;
 }
 
 .status-badge {
     font-size: 0.75rem;
-    padding: 4px 12px;
+    padding: 8px 14px;
     border-radius: 20px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1.2;
+    flex: 0 0 auto;
+    max-width: 100%;
 }
 
 .status-badge.verified {
@@ -177,6 +191,17 @@
 .status-badge.unverified {
     background: rgba(244, 63, 94, 0.1);
     color: var(--danger);
+}
+
+@media (max-width: 480px) {
+    .did-header {
+        align-items: stretch;
+    }
+
+    .status-badge {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .did-value {

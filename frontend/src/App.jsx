@@ -191,7 +191,8 @@ function App() {
   };
 
   const registerDID = async () => {
-    if (!contract || !account) return;
+    if (!account) return alert("Vui lòng kết nối ví trước khi đăng ký DID!");
+    if (!contract) return alert("Hệ thống bị mất kết nối với Smart Contract (thường do mạng Hardhat chưa đồng bộ). Vui lòng F5 làm mới lại trang và Kết Nối Ví lại lần nữa!");
     try {
       setLoading(true);
 
