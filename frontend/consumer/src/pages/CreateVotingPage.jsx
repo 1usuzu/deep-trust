@@ -10,10 +10,10 @@ const CreateVotingPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim()) return alert("Vui long nhap ten cuoc bau chon!");
+    if (!title.trim()) return alert("Vui lòng nhập tên cuộc bầu chọn!");
     const ok = await createVoting(title, description);
     if (ok) {
-      alert("Tao cuoc bau chon thanh cong!");
+      alert("Tạo cuộc bầu chọn thành công!");
       navigate("/select-voting");
     }
   };
@@ -21,33 +21,33 @@ const CreateVotingPage = () => {
   if (!currentAccount) {
     return (
       <div className="page-message">
-        <h2>Chua ket noi vi</h2>
-        <p>Vui long ket noi MetaMask de tao cuoc bau chon.</p>
-        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lai</button>
+        <h2>Chưa kết nối ví</h2>
+        <p>Vui lòng kết nối MetaMask để tạo cuộc bầu chọn.</p>
+        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lại</button>
       </div>
     );
   }
 
   return (
     <div className="create-voting-page">
-      <h2>Tao Cuoc Bau Chon Moi</h2>
-      <p className="desc">Ban se tro thanh quan tri vien cua cuoc bau chon nay</p>
+      <h2>Tạo Cuộc Bầu Chọn Mới</h2>
+      <p className="desc">Bạn sẽ trở thành quản trị viên của cuộc bầu chọn này</p>
 
       <form onSubmit={handleSubmit} className="voting-form">
         <div className="form-group">
-          <label>Ten cuoc bau chon: <span className="required">*</span></label>
+          <label>Tên cuộc bầu chọn: <span className="required">*</span></label>
           <input
             type="text"
-            placeholder="VD: Bau cu Ban Chap Hanh Lop 2024"
+            placeholder="VD: Bầu cử Ban Chấp Hành Lớp 2024"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
         </div>
         <div className="form-group">
-          <label>Mo ta (tuy chon):</label>
+          <label>Mô tả (tùy chọn):</label>
           <textarea
-            placeholder="VD: Cuoc bau cu de chon ra BCH lop nhiem ky 2024-2025"
+            placeholder="VD: Cuộc bầu cử để chọn ra BCH lớp nhiệm kỳ 2024-2025"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows="4"
@@ -55,17 +55,17 @@ const CreateVotingPage = () => {
         </div>
         <div className="form-actions">
           <button type="button" className="btn btn-outline" onClick={() => navigate("/")} disabled={isLoading}>
-            Huy
+            Hủy
           </button>
           <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? "Dang tao..." : "Tao Cuoc Bau Chon"}
+            {isLoading ? "Đang tạo..." : "Tạo Cuộc Bầu Chọn"}
           </button>
         </div>
       </form>
 
       {isLoading && (
         <div className="tx-pending">
-          Dang xu ly giao dich tren blockchain... Xac nhan tren MetaMask va cho doi.
+          Đang xử lý giao dịch trên blockchain... Xác nhận trên MetaMask và chờ đợi.
         </div>
       )}
     </div>

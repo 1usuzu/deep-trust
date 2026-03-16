@@ -25,25 +25,25 @@ const SelectVotingPage = () => {
   if (!currentAccount) {
     return (
       <div className="page-message">
-        <h2>Chua ket noi vi</h2>
-        <p>Vui long ket noi MetaMask de xem danh sach bau chon.</p>
-        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lai</button>
+        <h2>Chưa kết nối ví</h2>
+        <p>Vui lòng kết nối MetaMask để xem danh sách bầu chọn.</p>
+        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lại</button>
       </div>
     );
   }
 
   return (
     <div className="select-voting-page">
-      <h2>Chon Cuoc Bau Chon</h2>
-      <p className="desc">Chon mot cuoc bau chon de tham gia bo phieu an danh</p>
+      <h2>Chọn Cuộc Bầu Chọn</h2>
+      <p className="desc">Chọn một cuộc bầu chọn để tham gia bỏ phiếu ẩn danh</p>
 
       {loading ? (
-        <div className="loading">Dang tai danh sach bau chon...</div>
+        <div className="loading">Đang tải danh sách bầu chọn...</div>
       ) : votings.length === 0 ? (
         <div className="empty-state">
-          <p>Chua co cuoc bau chon nao</p>
+          <p>Chưa có cuộc bầu chọn nào</p>
           <button className="btn btn-primary" onClick={() => navigate("/create-voting")}>
-            Tao cuoc bau chon dau tien
+            Tạo cuộc bầu chọn đầu tiên
           </button>
         </div>
       ) : (
@@ -53,17 +53,17 @@ const SelectVotingPage = () => {
               <h3>{v.title}</h3>
               {v.description && <p className="voting-desc">{v.description}</p>}
               <div className="voting-meta">
-                <p><strong>So ung vien:</strong> {v.candidateCount}</p>
+                <p><strong>Số ứng viên:</strong> {v.candidateCount}</p>
                 <p>
-                  <strong>Trang thai:</strong>{" "}
+                  <strong>Trạng thái:</strong>{" "}
                   <span className={v.isOpen ? "status-open" : "status-closed"}>
-                    {v.isOpen ? "Dang mo" : "Da dong"}
+                    {v.isOpen ? "Đang mở" : "Đã đóng"}
                   </span>
                 </p>
                 <p>
                   <strong>Admin:</strong>{" "}
                   <span className={v.isAdmin ? "is-you" : ""}>
-                    {v.isAdmin ? "Ban" : `${v.admin.slice(0, 6)}...${v.admin.slice(-4)}`}
+                    {v.isAdmin ? "Bạn" : `${v.admin.slice(0, 6)}...${v.admin.slice(-4)}`}
                   </span>
                 </p>
                 <p className="created-at">{v.createdAt}</p>
@@ -74,7 +74,7 @@ const SelectVotingPage = () => {
       )}
 
       <div className="page-footer">
-        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lai trang chu</button>
+        <button className="btn btn-outline" onClick={() => navigate("/")}>Quay lại trang chủ</button>
       </div>
     </div>
   );

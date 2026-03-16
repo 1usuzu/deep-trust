@@ -232,6 +232,17 @@ async def verify_image(
         
         # Enhanced detector with multi-method analysis
         detection_result = detector.predict(temp_file.name)
+        
+        # KIỂM TRA LỖI KHÔNG TÌM THẤY MẶT
+        if detection_result.details.get("error") == "NO_FACE_DETECTED":
+            return {
+                "label": "ERROR",
+                "message": "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt và thử lại.",
+                "face_detected": False,
+                "confidence": 0,
+                "risk_level": "unknown"
+            }
+
         result = {
             "label": "FAKE" if detection_result.is_fake else "REAL",
             "confidence": detection_result.confidence,
@@ -318,6 +329,17 @@ async def verify_image_zkp(
         image_hash = hashlib.sha256(content).hexdigest()
         
         detection_result = detector.predict(temp_file.name)
+        
+        # KIỂM TRA LỖI KHÔNG TÌM THẤY MẶT (ZKP mode)
+        if detection_result.details.get("error") == "NO_FACE_DETECTED":
+            return {
+                "can_generate_proof": False,
+                "label": "ERROR",
+                "message": "Không tìm thấy khuôn mặt trong ảnh để thực hiện giao thức ZKP.",
+                "face_detected": False,
+                "confidence": 0
+            }
+
         result = {
             "label": "FAKE" if detection_result.is_fake else "REAL",
             "confidence": detection_result.confidence,

@@ -53,17 +53,7 @@ const WelcomePage = () => {
                       border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s'
                     }}
                   >
-                    Copy DID
-                  </button>
-                  <button
-                    onClick={() => navigate("/select-voting")}
-                    style={{
-                      flex: 1, padding: '10px 0', fontSize: '0.9rem', fontWeight: 600,
-                      color: 'var(--text-main)', background: 'rgba(15, 23, 42, 0.05)',
-                      border: '1px solid var(--glass-border)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    View Portal ↗
+                    Copy Decentralized Identity (DID)
                   </button>
                 </div>
                 <div style={{ fontSize: '.85rem', color: 'var(--success)', marginTop: '16px', textAlign: 'center', fontWeight: '500' }}>

@@ -214,8 +214,6 @@ class DeepfakeDetector:
                     face_tensor = self.mtcnn(img_original)
                     
                     if face_tensor is not None:
-                        # Convert tensor ngược lại PIL Image để đưa vào pipeline cũ
-                        # Lưu ý: MTCNN đã normalize, nên cần denormalize hoặc convert khéo léo
                         # Cách đơn giản: Dùng box để crop từ ảnh gốc
                         boxes, _ = self.mtcnn.detect(img_original)
                         if boxes is not None:
@@ -223,10 +221,32 @@ class DeepfakeDetector:
                             img_to_process = img_original.crop(box)
                             face_detected = True
                             logger.info("Face detected and cropped.")
-                except Exception as e:
-                    logger.warning(f"MTCNN Error: {e}. Using full image.")
+                    
+                    # BẮT BUỘC: Nếu bật Face Detection mà không tìm thấy mặt, phải báo lỗi
+                    if not face_detected:
+                        logger.warning("No face detected in the image.")
+                        return DetectionResult(
+                            is_fake=False, 
+                            confidence=0.0, 
+                            fake_probability=0.0, 
+                            risk_level=RiskLevel.LOW, 
+                            processing_time=time.time() - start_t,
+                            details={"error": "NO_FACE_DETECTED", "face_detected": False}
+                        )
 
-            # 3. Chuẩn bị ảnh cho model
+                except Exception as e:
+                    logger.warning(f"MTCNN Error: {e}. Using fallback safety.")
+                    # Trong production, nếu MTCNN lỗi thì nên từ chối luôn để đảm bảo an toàn
+                    return DetectionResult(
+                        is_fake=False, 
+                        confidence=0.0, 
+                        fake_probability=0.0, 
+                        risk_level=RiskLevel.LOW, 
+                        processing_time=time.time() - start_t,
+                        details={"error": f"FACE_DETECTION_ERROR: {str(e)}", "face_detected": False}
+                    )
+
+            # 3. Chuẩn bị ảnh cho model (chỗ này img_to_process đã là ảnh crop)
             img_np = np.array(img_to_process)
             
             # 4. Neural Network Inference
