@@ -11,8 +11,7 @@ ENV/
 # AI/ML
 ai_deepfake/dataset_final/
 ai_deepfake/dataset_final.rar
-*.pth
-*.onnx
+# Cho phép đẩy các model .pth lên (Sử dụng Git LFS)
 
 # Node.js
 node_modules/
@@ -48,3 +47,5 @@ logs/
 # Build outputs
 dist/
 build/
+
+.agent

@@ -13,7 +13,7 @@ const AdminPage = () => {
 
   const handleAddCandidate = (e) => {
     e.preventDefault();
-    if (!candidateName || !candidateAddress) return alert("Nhap day du thong tin ung vien!");
+    if (!candidateName || !candidateAddress) return alert("Nhập đầy đủ thông tin ứng viên!");
     addCandidate(candidateName, candidateAddress);
     setCandidateName("");
     setCandidateAddress("");
@@ -22,8 +22,8 @@ const AdminPage = () => {
   if (!currentVotingAddress) {
     return (
       <div className="page-message">
-        <h2>Chua chon cuoc bau chon</h2>
-        <button className="btn btn-outline" onClick={() => navigate("/select-voting")}>Chon bau chon</button>
+        <h2>Chưa chọn cuộc bầu chọn</h2>
+        <button className="btn btn-outline" onClick={() => navigate("/select-voting")}>Chọn bầu chọn</button>
       </div>
     );
   }
@@ -31,8 +31,8 @@ const AdminPage = () => {
   if (isLoading) {
     return (
       <div className="page-message">
-        <h2>Dang xu ly...</h2>
-        <p>Xac nhan giao dich tren MetaMask va cho doi.</p>
+        <h2>Đang xử lý...</h2>
+        <p>Xác nhận giao dịch trên MetaMask và chờ đợi.</p>
       </div>
     );
   }
@@ -40,55 +40,55 @@ const AdminPage = () => {
   if (!isAdmin) {
     return (
       <div className="page-message">
-        <h2>Truy cap bi tu choi</h2>
-        <p>Chi Admin moi co quyen quan ly.</p>
+        <h2>Truy cập bị từ chối</h2>
+        <p>Chỉ Admin mới có quyền quản lý.</p>
       </div>
     );
   }
 
   return (
     <div className="admin-page">
-      <h2>Trang Quan Tri</h2>
+      <h2>Trang Quản Trị</h2>
 
       <div className={`voting-status-box ${votingOpen ? "open" : "closed"}`}>
-        <h3>Trang thai bau cu: {votingOpen ? "DANG MO" : "DA DONG"}</h3>
-        <p>{votingOpen ? "Cu tri co the bo phieu" : "Cu tri khong the bo phieu"}</p>
+        <h3>Trạng thái bầu cử: {votingOpen ? "ĐANG MỞ" : "ĐÃ ĐÓNG"}</h3>
+        <p>{votingOpen ? "Cử tri có thể bỏ phiếu" : "Cử tri không thể bỏ phiếu"}</p>
         <button
           className={`btn ${votingOpen ? "btn-danger" : "btn-success"}`}
           onClick={votingOpen ? closeVoting : openVoting}
           disabled={isLoading}
         >
-          {votingOpen ? "Dong Bau Cu" : "Mo Bau Cu"}
+          {votingOpen ? "Đóng Bầu Cử" : "Mở Bầu Cử"}
         </button>
       </div>
 
       <div className="admin-form">
-        <h3>Them Ung Vien Moi</h3>
+        <h3>Thêm Ứng Viên Mới</h3>
         <form onSubmit={handleAddCandidate}>
           <div className="form-group">
-            <label>Ten ung vien:</label>
+            <label>Tên ứng viên:</label>
             <input
               type="text"
-              placeholder="Nguyen Van A"
+              placeholder="Nguyễn Văn A"
               value={candidateName}
               onChange={(e) => setCandidateName(e.target.value)}
               required
             />
           </div>
           <div className="form-group">
-            <label>Dia chi vi (MetaMask):</label>
+            <label>Địa chỉ ví (MetaMask):</label>
             <input
               type="text"
               placeholder="0x..."
               value={candidateAddress}
               onChange={(e) => setCandidateAddress(e.target.value)}
               pattern="^0x[a-fA-F0-9]{40}$"
-              title="Dia chi vi phai bat dau bang 0x va co 42 ky tu"
+              title="Địa chỉ ví phải bắt đầu bằng 0x và có 42 ký tự"
               required
             />
           </div>
           <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? "Dang xu ly..." : "Them Ung Vien"}
+            {isLoading ? "Đang xử lý..." : "Thêm Ứng Viên"}
           </button>
         </form>
       </div>

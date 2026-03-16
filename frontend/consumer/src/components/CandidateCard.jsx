@@ -2,7 +2,7 @@ import React from "react";
 
 const CandidateCard = ({ candidate, onVote, disabled }) => {
   const handleVote = () => {
-    if (window.confirm(`Ban co chac muon bo phieu cho ${candidate.name}?`)) {
+    if (window.confirm(`Bạn có chắc muốn bỏ phiếu cho ${candidate.name}?`)) {
       onVote(candidate.id);
     }
   };
@@ -11,11 +11,11 @@ const CandidateCard = ({ candidate, onVote, disabled }) => {
     <div className="candidate-card">
       <h3>{candidate.name}</h3>
       <p><strong>ID:</strong> {candidate.id}</p>
-      <p><strong>Dia chi vi:</strong></p>
+      <p><strong>Địa chỉ ví:</strong></p>
       <p className="candidate-address">{candidate.candidateAddress}</p>
-      <p><strong>So phieu:</strong> <span className="vote-count">{candidate.voteCount}</span></p>
+      <p><strong>Số phiếu:</strong> <span className="vote-count">{candidate.voteCount}</span></p>
       <button onClick={handleVote} className="vote-button" disabled={disabled}>
-        Bo phieu
+        Bỏ phiếu
       </button>
     </div>
   );

@@ -250,6 +250,17 @@ export const VotingProvider = ({ children }) => {
   // ── ZKP Identity Verify ───────────────────────────────────────────────────
   const verifyIdentity = async (proof, publicSignals) => {
     if (!currentAccount) return { success: false, message: "Chưa kết nối ví" };
+
+    // Front-end binding check: Mặc dù Zero-Knowledge Proof bảo vệ danh tính,
+    // ta chốt thêm lớp bảo mật: Yêu cầu file proof phải được sinh ra trên chính trình duyệt cùng loại Ví đã ký.
+    const userSecret = localStorage.getItem(`zkp_user_secret_${currentAccount}`);
+    if (!userSecret) {
+      return {
+        success: false,
+        message: "Bằng chứng ZKP không khớp với tài khoản ví hiện tại! Hãy đảm bảo bạn dùng đúng tài khoản MetaMask đã nhận chứng nhận trước đó."
+      };
+    }
+
     try {
       setIsLoading(true);
 
@@ -317,7 +328,10 @@ export const VotingProvider = ({ children }) => {
       }
       window.ethereum.on("accountsChanged", (accounts) => {
         if (accounts.length > 0) {
-          setCurrentAccount(accounts[0].toLowerCase());
+          const newAccount = accounts[0].toLowerCase();
+          setCurrentAccount(newAccount);
+          setZkpVerified(false);
+          setZkpData(null);
           initFactoryContract();
         } else {
           disconnectWallet();

@@ -72,7 +72,7 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
             <div className="did-header">
               <span className="did-title">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Decentralized Identity
               </span>
@@ -88,27 +88,13 @@ function WalletConnect({ account, userDID, onConnect, onDisconnect, onRegisterDI
                   <button
                     onClick={copyDID}
                     style={{
-                      flex: 1, padding: '6px 0', fontSize: '.78rem', fontWeight: 600,
+                      flex: 1, padding: '8px 0', fontSize: '0.82rem', fontWeight: 600,
                       color: 'var(--primary)', background: 'rgba(37,99,235,.1)',
                       border: 'none', borderRadius: '7px', cursor: 'pointer',
                     }}
                   >
                     Copy DID
                   </button>
-                  <a
-                    href={`${CONSUMER_APP_URL}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '6px 0', fontSize: '.78rem', fontWeight: 600,
-                      color: 'var(--text-muted)', background: 'rgba(255,255,255,.1)',
-                      border: '1px solid rgba(255,255,255,.15)', borderRadius: '7px',
-                      cursor: 'pointer', textDecoration: 'none',
-                    }}
-                  >
-                    View Portal ↗
-                  </a>
                 </div>
                 <div style={{ fontSize: '.75rem', color: 'var(--success)', marginTop: '8px', textAlign: 'center' }}>
                   ● Identity active — on-chain verification enabled

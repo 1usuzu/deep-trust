@@ -9,17 +9,17 @@ const ResultsPage = () => {
   if (!currentVotingAddress) {
     return (
       <div className="page-message">
-        <h2>Chua chon cuoc bau chon</h2>
-        <p>Vui long chon mot cuoc bau chon de xem ket qua.</p>
-        <button className="btn btn-outline" onClick={() => navigate("/select-voting")}>Chon bau chon</button>
+        <h2>Chưa chọn cuộc bầu chọn</h2>
+        <p>Vui lòng chọn một cuộc bầu chọn để xem kết quả.</p>
+        <button className="btn btn-outline" onClick={() => navigate("/select-voting")}>Chọn bầu chọn</button>
       </div>
     );
   }
 
-  if (isLoading) return <div className="loading">Dang tai ket qua...</div>;
+  if (isLoading) return <div className="loading">Đang tải kết quả...</div>;
 
   if (!candidates || candidates.length === 0) {
-    return <div className="page-message"><p>Chua co ung vien nao.</p></div>;
+    return <div className="page-message"><p>Chưa có ứng viên nào.</p></div>;
   }
 
   const sorted = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
@@ -27,21 +27,21 @@ const ResultsPage = () => {
 
   return (
     <div className="results-page">
-      <h2>Ket Qua Bo Phieu</h2>
+      <h2>Kết Quả Bỏ Phiếu</h2>
       {votingInfo && <p className="desc">{votingInfo.title}</p>}
 
       <div className="results-summary">
-        <span>Tong so phieu: <strong>{totalVotes}</strong></span>
-        <span>So ung vien: <strong>{sorted.length}</strong></span>
+        <span>Tổng số phiếu: <strong>{totalVotes}</strong></span>
+        <span>Số ứng viên: <strong>{sorted.length}</strong></span>
       </div>
 
       <table className="results-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>Ung Cu Vien</th>
-            <th>So Phieu</th>
-            <th>Ti Le</th>
+            <th>Ứng Cử Viên</th>
+            <th>Số Phiếu</th>
+            <th>Tỉ Lệ</th>
           </tr>
         </thead>
         <tbody>

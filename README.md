@@ -163,51 +163,25 @@ npm run dev
 1. **Main App (Identity Provider)**: Truy cập `http://localhost:5173/` để kết nối Ví Metamask, verify khuôn mặt, tải \`proof.json & public.json\` về máy.
 2. **Consumer App (DApp Bầu Cử)**: Truy cập `http://localhost:5173/consumer/` để đăng nhập với tư cách cử tri vô danh. Gửi bằng chứng ZKP mà không cần lộ mặt.
 
-## Deploy lên Testnet (Polygon Amoy)
+---
 
-### Cấu hình
+## 🚀 Deployment (Triển khai Production)
 
-Sửa file `blockchain/hardhat.config.js`:
+Dự án V1 đã sẵn sàng để đưa lên Internet. Chúng tôi khuyến nghị sử dụng các nền tảng sau:
 
-```javascript
-networks: {
-  amoy: {
-    url: "https://rpc-amoy.polygon.technology",
-    accounts: ["YOUR_PRIVATE_KEY"],
-    chainId: 80002
-  }
-}
-```
+- **Backend AI**: Triển khai lên [Render.com](https://render.com) (Server Python/FastAPI).
+- **Frontend App**: Triển khai lên [Vercel.com](https://vercel.com) (MPA Vite/React).
+- **Blockchain**: Triển khai Smart Contract lên mạng **Polygon Amoy Testnet**.
 
-### Deploy
+> [!IMPORTANT]
+> Xem hướng dẫn chi tiết từng bước tại: **[DEPLOY_GUIDE.md](file:///d:/Projects/test_face/DEPLOY_GUIDE.md)**
 
-```bash
-cd blockchain
-npx hardhat run scripts/deploy.js --network amoy
-```
+### Checklist chuẩn bị đẩy GitHub:
+- [ ] Đảm bảo không commit file `.env` chứa key thật.
+- [ ] Đã cấu hình biến môi trường trên Render/Vercel.
+- [ ] Smart contract đã được deploy lên Testnet và cập nhật địa chỉ vào cấu hình.
 
-## Checklist trước khi đẩy GitHub/Hosting
-
-1. Không commit file chứa secrets (`.env`, private key, token).
-2. Backend bắt buộc có biến môi trường:
-
-```env
-SERVER_PRIVATE_KEY=<YOUR_BACKEND_ORACLE_PRIVATE_KEY>
-ALLOWED_ORIGINS=https://your-frontend-domain.com
-```
-
-3. Chỉ dùng local fallback khi dev:
-
-```env
-ALLOW_INSECURE_DEV_KEY=true
-INSECURE_DEV_PRIVATE_KEY=<HARDHAT_ACCOUNT_PRIVATE_KEY>
-```
-
-4. Tắt fallback local trước khi deploy production:
-
-```env
-ALLOW_INSECURE_DEV_KEY=false
-```
+---
 
 ## API Endpoints
 

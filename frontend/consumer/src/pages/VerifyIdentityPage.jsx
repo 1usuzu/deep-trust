@@ -70,7 +70,7 @@ const VerifyIdentityPage = () => {
         </div>
       ) : (
         <div className="verify-form">
-          <div style={{ display: "flex", gap: "20px", marginBottom: "20px", justifyContent: "center" }}>
+          <div className="verify-upload-grid">
             <div
               className={`upload-area ${proofFile ? 'uploaded' : ''}`}
               onClick={() => proofRef.current?.click()}

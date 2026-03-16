@@ -232,11 +232,31 @@ function App() {
       if (Number.isFinite(chainId) && chainId !== EXPECTED_CHAIN_ID) {
         setContract(null);
         setUserDID(null);
+        setVerificationResult(null);
         setStats({ totalDIDs: 0, totalVerifications: 0 });
       }
     };
+
+    const handleAccountsChanged = (accounts) => {
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+        setUserDID(null);
+        setVerificationResult(null);
+      } else {
+        setAccount(null);
+        setContract(null);
+        setUserDID(null);
+        setVerificationResult(null);
+      }
+    };
+
     window.ethereum.on('chainChanged', handleChainChanged);
-    return () => window.ethereum.removeListener('chainChanged', handleChainChanged);
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+
+    return () => {
+      window.ethereum.removeListener('chainChanged', handleChainChanged);
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    };
   }, []);
 
   const verifyImage = async (file) => {
