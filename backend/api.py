@@ -77,6 +77,23 @@ did_service = None
 blockchain_client = None
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+
+def _detector_status_value(detection_result) -> str:
+    status = getattr(detection_result, "status", None)
+    if status is None:
+        return "ok"
+    return getattr(status, "value", str(status)).lower()
+
+
+def _status_error_code(status_value: str, details: dict) -> str:
+    if status_value == "no_face":
+        return "NO_FACE_DETECTED"
+    if status_value == "face_detection_error":
+        return details.get("error", "FACE_DETECTION_ERROR")
+    if status_value == "no_model":
+        return details.get("error", "NO_MODEL")
+    return details.get("error", "DETECTION_ERROR")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global detector, zkp_oracle, did_service, blockchain_client
@@ -102,7 +119,7 @@ async def lifespan(app: FastAPI):
     # Initialize AI Detector
     if DeepfakeDetector is not None:
         model_dir = Path(__file__).parent.parent / "ai_deepfake" / "models"
-        if (model_dir / "best_model.pth").exists():
+        if (model_dir / "best_model.pth").exists() or (model_dir / "best_model_v2.pth").exists():
             try:
                 detector = DeepfakeDetector()
                 print("AI Detector initialized")
@@ -233,14 +250,17 @@ async def verify_image(
         # Enhanced detector with multi-method analysis
         detection_result = detector.predict(temp_file.name)
         
-        # KIỂM TRA LỖI KHÔNG TÌM THẤY MẶT
-        if detection_result.details.get("error") == "NO_FACE_DETECTED":
+        status_value = _detector_status_value(detection_result)
+        if status_value != "ok":
+            details = detection_result.details if isinstance(detection_result.details, dict) else {}
             return {
+                "status": status_value,
                 "label": "ERROR",
-                "message": "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt và thử lại.",
-                "face_detected": False,
-                "confidence": 0,
-                "risk_level": "unknown"
+                "message": "Không thể phân loại ảnh một cách an toàn. Vui lòng thử lại với ảnh khuôn mặt rõ hơn.",
+                "error_code": _status_error_code(status_value, details),
+                "face_detected": details.get("face_detected", False),
+                "confidence": 0.0,
+                "risk_level": "unknown",
             }
 
         result = {
@@ -330,14 +350,17 @@ async def verify_image_zkp(
         
         detection_result = detector.predict(temp_file.name)
         
-        # KIỂM TRA LỖI KHÔNG TÌM THẤY MẶT (ZKP mode)
-        if detection_result.details.get("error") == "NO_FACE_DETECTED":
+        status_value = _detector_status_value(detection_result)
+        if status_value != "ok":
+            details = detection_result.details if isinstance(detection_result.details, dict) else {}
             return {
+                "status": status_value,
                 "can_generate_proof": False,
                 "label": "ERROR",
-                "message": "Không tìm thấy khuôn mặt trong ảnh để thực hiện giao thức ZKP.",
-                "face_detected": False,
-                "confidence": 0
+                "message": "Không thể tạo ZKP do kết quả phát hiện không hợp lệ.",
+                "error_code": _status_error_code(status_value, details),
+                "face_detected": details.get("face_detected", False),
+                "confidence": 0.0,
             }
 
         result = {
@@ -520,6 +543,13 @@ async def issue_credential(
         image_hash = hashlib.sha256(content).hexdigest()
         detection_result = detector.predict(temp_file.name)
         
+        status_value = _detector_status_value(detection_result)
+        if status_value != "ok":
+            raise HTTPException(
+                status_code=422,
+                detail=f"Detector result is non-classifiable: {status_value}"
+            )
+
         # 2. Create Oracle Signature
         is_real = not detection_result.is_fake
         is_real_str = "true" if is_real else "false"
