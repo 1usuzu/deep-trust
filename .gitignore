@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# AI/ML
+ai_deepfake/dataset_final/
+ai_deepfake/dataset_final.rar
+# Cho phép đẩy các model .pth lên (Sử dụng Git LFS)
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Blockchain (Hardhat)
+blockchain/artifacts/
+blockchain/cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Local databases / runtime data
+*.db
+consumer_app/data/
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+
+.agent
