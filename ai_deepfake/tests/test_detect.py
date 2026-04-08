@@ -1,12 +1,17 @@
-"""
-PR1 data-contract tests for DetectionResult, DetectionStatus, RiskLevel, and AISettings.
-These tests validate enum values, dataclass field defaults, serialization,
-and config constants — no model inference is tested here.
-"""
+import tempfile
+from pathlib import Path
 
 import pytest
-from ai_deepfake.detect import DetectionResult, DetectionStatus, RiskLevel
+import torch
+from PIL import Image
+
 from ai_deepfake.ai_config import settings
+from ai_deepfake.detect import (
+    DeepfakeDetector,
+    DetectionResult,
+    DetectionStatus,
+    RiskLevel,
+)
 
 
 class TestDetectionStatusEnum:
@@ -82,3 +87,180 @@ class TestConfig:
         assert settings.SIGNAL_LAPLACIAN_THRESHOLD == 100.0
         assert settings.SIGNAL_HIGH_FREQ_THRESHOLD == 13.0
         assert settings.SIGNAL_BOOST_STEP == 0.03
+
+
+class _FakeModel:
+    def __init__(self, fake_prob: float):
+        # Build logits whose softmax gives exactly fake_prob at index 0.
+        self._logits = torch.log(torch.tensor([[fake_prob, 1.0 - fake_prob]], dtype=torch.float32))
+
+    def __call__(self, _x):
+        return self._logits
+
+
+class _FakeMTCNNNoFace:
+    def detect(self, _img):
+        return None, None
+
+
+class _FakeMTCNNRaises:
+    def detect(self, _img):
+        raise RuntimeError("mock mtcnn failure")
+
+
+def _make_test_detector(
+    fake_prob_v1: float | None = 0.9,
+    fake_prob_v2: float | None = None,
+    threshold: float = 0.5,
+    mtcnn=None,
+    signal_boost: float = 0.0,
+) -> DeepfakeDetector:
+    if fake_prob_v1 is not None and fake_prob_v2 is None:
+        # Mirror V1 into V2 so ensemble output matches desired fake probability.
+        fake_prob_v2 = fake_prob_v1
+
+    detector = object.__new__(DeepfakeDetector)
+    detector.device = "cpu"
+    detector.threshold = threshold
+    detector.model_v1 = _FakeModel(fake_prob_v1) if fake_prob_v1 is not None else None
+    detector.model_v2 = _FakeModel(fake_prob_v2) if fake_prob_v2 is not None else None
+    detector.tx_v1 = lambda _img: torch.zeros((3, 224, 224), dtype=torch.float32)
+    detector.tx_v2 = lambda _img: torch.zeros((3, 380, 380), dtype=torch.float32)
+    detector.mtcnn = mtcnn
+    detector._analyze_signal = lambda _np: signal_boost
+    return detector
+
+
+def _make_temp_image() -> str:
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        Image.new("RGB", (32, 32), color=(20, 30, 40)).save(tmp.name)
+        return tmp.name
+
+
+class TestInferenceContract:
+    def test_fake_high_probability_case(self):
+        detector = _make_test_detector(fake_prob_v1=0.9, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.status == DetectionStatus.OK
+        assert result.is_fake is True
+        assert result.fake_probability == pytest.approx(0.9, abs=1e-6)
+        assert result.confidence == pytest.approx(0.9, abs=1e-6)
+
+    def test_real_low_fake_probability_case(self):
+        detector = _make_test_detector(fake_prob_v1=0.2, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.status == DetectionStatus.OK
+        assert result.is_fake is False
+        assert result.fake_probability == pytest.approx(0.2, abs=1e-6)
+        assert result.confidence == pytest.approx(0.8, abs=1e-6)
+
+    @pytest.mark.parametrize(
+        "fake_prob,expected_is_fake,expected_confidence",
+        [(0.8, True, 0.8), (0.2, False, 0.8)],
+    )
+    def test_confidence_semantics_for_real_vs_fake(self, fake_prob, expected_is_fake, expected_confidence):
+        detector = _make_test_detector(fake_prob_v1=fake_prob, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.is_fake is expected_is_fake
+        assert result.confidence == pytest.approx(expected_confidence, abs=1e-6)
+
+    def test_no_face_case_returns_status_no_face(self):
+        detector = _make_test_detector(fake_prob_v1=0.9, mtcnn=_FakeMTCNNNoFace())
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.status == DetectionStatus.NO_FACE
+        assert result.details["error"] == "NO_FACE_DETECTED"
+        assert result.details["face_detected"] is False
+
+    def test_face_detector_exception_returns_status_face_detection_error(self):
+        detector = _make_test_detector(fake_prob_v1=0.9, mtcnn=_FakeMTCNNRaises())
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.status == DetectionStatus.FACE_DETECTION_ERROR
+        assert result.details["error"].startswith("FACE_DETECTION_ERROR:")
+        assert result.details["face_detected"] is False
+
+    def test_signal_boost_disabled_respects_config(self, monkeypatch):
+        detector = _make_test_detector(fake_prob_v1=0.5, signal_boost=0.4)
+        monkeypatch.setattr(settings, "ENABLE_SIGNAL_ANALYSIS", False)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.fake_probability == pytest.approx(0.5, abs=1e-6)
+        assert result.details["signal_boost"] == pytest.approx(0.0, abs=1e-6)
+
+    def test_threshold_exact_boundary(self):
+        detector = _make_test_detector(fake_prob_v1=0.5, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.is_fake is True
+
+    def test_threshold_below_boundary(self):
+        detector = _make_test_detector(fake_prob_v1=0.499, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.is_fake is False
+
+    @pytest.mark.parametrize(
+        "fake_prob,expected_risk",
+        [
+            (0.86, RiskLevel.CRITICAL),
+            (0.66, RiskLevel.HIGH),
+            (0.41, RiskLevel.MEDIUM),
+            (0.39, RiskLevel.LOW),
+        ],
+    )
+    def test_risk_level_boundaries(self, fake_prob, expected_risk):
+        detector = _make_test_detector(fake_prob_v1=fake_prob, threshold=0.5)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.risk_level == expected_risk
+
+    def test_no_model_path_sets_status_and_legacy_error(self):
+        detector = _make_test_detector(fake_prob_v1=None, fake_prob_v2=None)
+        image_path = _make_temp_image()
+        try:
+            result = detector.predict(image_path)
+        finally:
+            Path(image_path).unlink(missing_ok=True)
+
+        assert result.status == DetectionStatus.NO_MODEL
+        assert result.details["error"] == "No model prediction"
