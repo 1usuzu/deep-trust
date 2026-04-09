@@ -1,69 +1,77 @@
-# DeepfakeVerify - Hệ thống Định danh Phi tập trung với AI Phát hiện Deepfake
+# DeepfakeVerify - Hệ thống định danh phi tập trung với AI phát hiện deepfake
 
-> Đồ án tốt nghiệp: Hệ thống định danh phi tập trung tích hợp AI phát hiện Deepfake và xác thực không kiến thức
+> Đồ án tốt nghiệp: hệ thống định danh phi tập trung tích hợp AI phát hiện deepfake và xác thực không kiến thức.
 
-## Giới thiệu
+## Trạng thái hiện tại (sau Stabilize + Harden)
 
-Hệ thống kết hợp 3 công nghệ chính:
+### Baseline và claim
 
-- **AI Deepfake Detection**: Phát hiện ảnh giả mạo sử dụng EfficientNet-B0
-- **Decentralized Identity (DID)**: Định danh phi tập trung theo chuẩn W3C
-- **Blockchain**: Lưu trữ kết quả xác thực bất biến trên smart contract
+- **Frozen baseline (source of truth): 83.33% accuracy** theo báo cáo đo thực tế đã chốt.
+- Con số **93.33%** trong tài liệu cũ chỉ là **legacy/historical README claim**, không được dùng làm frozen baseline.
+- Khi báo cáo kết quả mới, luôn dùng output đo từ `ai_deepfake/evaluate.py`, không overclaim.
 
-## Tính năng
+### Kiến trúc detector hiện tại (high-level)
 
-- Phát hiện ảnh Deepfake với độ chính xác 93.33%
-- Tạo và quản lý DID (Decentralized Identifier)
-- Cấp Verifiable Credentials cho kết quả xác thực
-- Lưu trữ kết quả lên blockchain với chữ ký Oracle
-- Giao diện web thân thiện với drag & drop
+- Inference dùng ensemble 2 model ảnh:
+  - EfficientNet-B0 (`best_model.pth`)
+  - EfficientNet-B4 head tùy biến (`best_model_v2.pth`)
+- Kết quả chính là `fake_probability` (xác suất ảnh giả), sau đó phân lớp theo threshold.
+- `confidence` là độ chắc chắn theo lớp dự đoán:
+  - nếu dự đoán FAKE: `confidence = fake_probability`
+  - nếu dự đoán REAL: `confidence = 1 - fake_probability`
+- Có face detection (MTCNN) nếu môi trường có `facenet-pytorch`.
 
-## Công nghệ sử dụng
+### Threshold policy (C1)
 
-| Layer      | Công nghệ                                     |
-| ---------- | --------------------------------------------- |
-| AI Model   | PyTorch, EfficientNet-B0, Temperature Scaling |
-| Backend    | FastAPI, Uvicorn, Python 3.11                 |
-| Frontend   | React 19, Vite, ethers.js v6                  |
-| Blockchain | Solidity 0.8.20, Hardhat                      |
-| DID        | W3C DID Core 1.0, Ed25519, Verifiable Credentials |
-| ZKP        | Circom 2.1.0, SnarkJS, Groth16, Poseidon Hash |
+- Default operating threshold: **`0.65`** (balanced mode, runtime default).
+- High-recall fake-detection mode: `0.40`.
+- High-precision fake-detection mode: `0.75`.
+- Source of truth: `docs/c1_operating_points.json`.
 
-## Cấu trúc dự án
+### Hành vi hardening theo status
 
-```
-├── ai_deepfake/           # AI Deepfake Detection
-│   ├── detect.py          # Inference module (EfficientNet-B0)
-│   ├── train.py           # Training script
-│   ├── test_model.py      # Evaluation
-│   └── models/            # Trained models (.pth)
-├── backend/               # FastAPI Backend
-│   ├── api.py             # REST API + Oracle signing + DID integration
-│   └── zkp_oracle.py      # ZKP Oracle module
-├── blockchain/            # Smart Contracts
-│   ├── contracts/         # Solidity contracts
-│   └── scripts/           # Deploy scripts
-├── did_system/            # ★ DID & Verifiable Credentials (W3C Standard)
-│   ├── __init__.py        # Module exports
-│   ├── key_manager.py     # Ed25519/secp256k1 key management
-│   ├── did_manager.py     # DID CRUD operations
-│   ├── credential_issuer.py   # Verifiable Credentials issuance
-│   ├── credential_verifier.py # VC verification
-│   ├── did_service.py     # Integration service
-│   └── test_did_system.py # 22 comprehensive tests
-├── zkp/                   # ★ Zero-Knowledge Proofs (Circom + SnarkJS)
-│   ├── circuits/          # Circom circuits
-│   ├── contracts/         # ZK Verifier contracts
-│   └── scripts/           # Test scripts
-└── frontend/              # React Frontend
-    └── src/               # React components
+- Detector trả `status` để phân biệt kết quả phân loại hợp lệ và lỗi không-classifiable:
+  - `ok`
+  - `no_face`
+  - `face_detection_error`
+  - `no_model`
+  - `error`
+- **Quy tắc an toàn bắt buộc ở API layer**: nếu `status != ok` thì không coi là REAL/APPROVED.
+
+## Công nghệ chính
+
+| Layer | Công nghệ |
+| --- | --- |
+| AI Model | PyTorch, EfficientNet-B0 + EfficientNet-B4 ensemble |
+| Backend | FastAPI, Uvicorn, Python |
+| Frontend | React, Vite, ethers.js |
+| Blockchain | Solidity, Hardhat |
+| DID | W3C DID Core, Verifiable Credentials |
+| ZKP | Circom, SnarkJS, Groth16 |
+
+## Cấu trúc dự án (thực tế hiện có)
+
+```text
+ai_deepfake/
+  detect.py
+  ai_config.py
+  evaluate.py
+  models/
+backend/
+  api.py
+  consumer_api.py
+  zkp_oracle.py
+blockchain/
+did_system/
+frontend/
+zkp/
 ```
 
 ## Cài đặt
 
 ### Yêu cầu hệ thống
 
-- Python 3.11+
+- Python 3.11 or 3.12 (recommended; validated for current backend requirements)
 - Node.js 18+
 - CUDA (khuyến nghị, để chạy AI trên GPU)
 - MetaMask extension
@@ -73,15 +81,15 @@ Hệ thống kết hợp 3 công nghệ chính:
 ```bash
 # Clone project
 git clone <repository-url>
-cd face
+cd <repo-directory>
 
 # Tạo Python virtual environment (Dành cho Backend)
 python -m venv .venv
 .venv\Scripts\activate  # Windows
 # source .venv/bin/activate  # Linux/Mac
 
-# Cài đặt Python dependencies
-pip install torch torchvision fastapi uvicorn python-multipart pillow cryptography base58 web3 eth-account
+# Cài đặt Python dependencies cho backend
+pip install -r backend/requirements.txt
 
 # Cài đặt Blockchain dependencies
 cd blockchain
@@ -174,29 +182,36 @@ Dự án V1 đã sẵn sàng để đưa lên Internet. Chúng tôi khuyến ngh
 - **Blockchain**: Triển khai Smart Contract lên mạng **Polygon Amoy Testnet**.
 
 > [!IMPORTANT]
-> Xem hướng dẫn chi tiết từng bước tại: **[DEPLOY_GUIDE.md](file:///d:/Projects/test_face/DEPLOY_GUIDE.md)**
+> Trước khi deploy production, chuẩn bị đủ biến môi trường backend/frontend theo các file mẫu `.env.example`.
+>
+> Checklist chuẩn bị release/deploy:
+>
+> - `docs/release_readiness_checklist.md`
+> - `docs/deploy_readiness_checklist.md`
 
-### Checklist chuẩn bị đẩy GitHub:
+### Checklist chuẩn bị đẩy GitHub
+
 - [ ] Đảm bảo không commit file `.env` chứa key thật.
 - [ ] Đã cấu hình biến môi trường trên Render/Vercel.
 - [ ] Smart contract đã được deploy lên Testnet và cập nhật địa chỉ vào cấu hình.
 
 ---
 
-## API Endpoints
+## API endpoints
 
-| Method | Endpoint      | Mô tả                             |
-| ------ | ------------- | --------------------------------- |
-| POST   | `/api/verify` | Xác thực ảnh deepfake + ký Oracle |
-| POST   | `/api/verify-zkp` | Xác thực + tạo ZKP input |
-| POST   | `/api/blockchain/record` | Ghi kết quả lên blockchain (server ký tx, không cần MetaMask) |
-| GET    | `/api/zkp-info` | Thông tin ZKP system |
-| POST   | `/api/did/create` | Tạo DID mới |
-| GET    | `/api/did/resolve/{did}` | Resolve DID Document |
-| GET    | `/api/did/resolve-by-address/{address}` | Tìm DID theo ETH address |
-| POST   | `/api/credential/issue` | Xác thực + cấp Verifiable Credential |
-| POST   | `/api/credential/verify` | Xác thực Verifiable Credential |
-| GET    | `/api/did/info` | Thống kê DID system |
+| Method | Endpoint | Mô tả |
+| --- | --- | --- |
+| POST | `/api/verify` | Xác thực ảnh deepfake + ký Oracle (chỉ khi `status=ok`) |
+| POST | `/api/verify-zkp` | Xác thực + tạo dữ liệu ZKP (chỉ khi `status=ok`) |
+| GET | `/api/health` | Health check backend |
+| POST | `/api/blockchain/record` | Ghi kết quả lên blockchain (server ký tx) |
+| GET | `/api/zkp-info` | Thông tin ZKP system |
+| POST | `/api/did/create` | Tạo DID mới |
+| GET | `/api/did/resolve/{did}` | Resolve DID document |
+| GET | `/api/did/resolve-by-address/{address}` | Tìm DID theo ETH address |
+| POST | `/api/credential/issue` | Xác thực + cấp VC (reject nếu detector `status != ok`) |
+| POST | `/api/credential/verify` | Xác thực VC |
+| GET | `/api/did/info` | Thống kê DID system |
 
 ### Blockchain end-to-end (server ký — không cần MetaMask)
 
@@ -221,28 +236,106 @@ curl -X POST "http://localhost:8000/api/verify" \
   -F "user_address=0xYourWalletAddress"
 ```
 
-### Response
+### Response mẫu `/api/verify` (status=ok)
 
 ```json
 {
+  "status": "ok",
   "label": "REAL",
-  "confidence": 0.92,
-  "real_prob": 0.92,
-  "fake_prob": 0.08,
+  "confidence": "<measured_value>",
+  "real_prob": "<measured_value>",
+  "fake_prob": "<measured_value>",
   "image_hash": "a1b2c3...",
   "signature": "abc123...",
-  "debug_msg": "0xAddress:imageHash:true"
+  "debug_msg": "0xAddress:imageHash:true",
+  "risk_level": "low|medium|high|critical"
 }
 ```
 
-## Kết quả AI Model
+### Response mẫu non-classifiable (`status != ok`)
 
-| Metric        | Giá trị                          |
-| ------------- | -------------------------------- |
-| Test Accuracy | 93.33%                           |
-| Model         | EfficientNet-B0                  |
-| Temperature   | 3.5                              |
-| Dataset       | 6000 images (50% real, 50% fake) |
+```json
+{
+  "status": "no_face",
+  "label": "ERROR",
+  "message": "<human_readable_message>",
+  "error_code": "NO_FACE_DETECTED",
+  "face_detected": false,
+  "confidence": 0.0
+}
+```
+
+## Đánh giá model (evaluation harness)
+
+Script đo hiện tại: `ai_deepfake/evaluate.py`
+
+### Cấu trúc dữ liệu đầu vào
+
+```text
+<data-dir>/
+  real/
+    *.jpg|*.jpeg|*.png|*.bmp|*.webp
+  fake/
+    *.jpg|*.jpeg|*.png|*.bmp|*.webp
+```
+
+### Cách chạy
+
+```bash
+python ai_deepfake/evaluate.py \
+  --data-dir <path_to_dataset_root> \
+  --output <path_to_report.json> \
+  --detector-version <tag_for_comparison>
+```
+
+Tuỳ chọn:
+
+- `--threshold <float>`: override threshold khi gọi detector.
+
+### Hành vi script
+
+- Báo lỗi rõ ràng nếu thiếu dữ liệu (`real/`, `fake/`) hoặc không có ảnh.
+- Báo lỗi rõ ràng nếu thiếu model weights (`best_model.pth` và `best_model_v2.pth`).
+- Ghi report JSON dùng cho so sánh V1 vs V2, bao gồm:
+  - metadata (version tag, threshold, số ảnh, model presence)
+  - metrics đo được
+  - confusion matrix
+  - thống kê status non-ok
+  - kết quả từng ảnh (`per_image`)
+
+### JSON report mẫu (schema-oriented, không phải số đo thật)
+
+```json
+{
+  "meta": {
+    "detector_version_tag": "<version_tag>",
+    "total_images": "<measured_value>",
+    "counted_images_for_metrics": "<measured_value>",
+    "excluded_non_ok_images": "<measured_value>"
+  },
+  "status_summary": {
+    "non_ok_breakdown": {
+      "<status_name>": "<measured_value>"
+    }
+  },
+  "metrics": {
+    "accuracy": "<measured_value>",
+    "precision_fake": "<measured_value>",
+    "recall_fake": "<measured_value>",
+    "f1_fake": "<measured_value>",
+    "precision_real": "<measured_value>",
+    "recall_real": "<measured_value>",
+    "f1_real": "<measured_value>",
+    "f1_macro": "<measured_value>"
+  },
+  "confusion_matrix": {
+    "tp_fake_as_fake": "<measured_value>",
+    "tn_real_as_real": "<measured_value>",
+    "fp_real_as_fake": "<measured_value>",
+    "fn_fake_as_real": "<measured_value>"
+  }
+}
+```
 
 ## Smart Contract
 

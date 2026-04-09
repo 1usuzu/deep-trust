@@ -25,3 +25,9 @@ opencv-python==4.11.0.86
 # Optional face extractor (used if installed)
 facenet-pytorch==2.6.0
 
+# Config management (used by ai_deepfake/ai_config.py)
+pydantic-settings>=2.0.0
+
+# Testing
+pytest>=8.0.0
+
