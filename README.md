@@ -21,6 +21,13 @@
   - nếu dự đoán REAL: `confidence = 1 - fake_probability`
 - Có face detection (MTCNN) nếu môi trường có `facenet-pytorch`.
 
+### Threshold policy (C1)
+
+- Default operating threshold: **`0.65`** (balanced mode, runtime default).
+- High-recall fake-detection mode: `0.40`.
+- High-precision fake-detection mode: `0.75`.
+- Source of truth: `docs/c1_operating_points.json`.
+
 ### Hành vi hardening theo status
 
 - Detector trả `status` để phân biệt kết quả phân loại hợp lệ và lỗi không-classifiable:
@@ -64,7 +71,7 @@ zkp/
 
 ### Yêu cầu hệ thống
 
-- Python 3.11+
+- Python 3.11 or 3.12 (recommended; validated for current backend requirements)
 - Node.js 18+
 - CUDA (khuyến nghị, để chạy AI trên GPU)
 - MetaMask extension
@@ -74,15 +81,15 @@ zkp/
 ```bash
 # Clone project
 git clone <repository-url>
-cd face
+cd <repo-directory>
 
 # Tạo Python virtual environment (Dành cho Backend)
 python -m venv .venv
 .venv\Scripts\activate  # Windows
 # source .venv/bin/activate  # Linux/Mac
 
-# Cài đặt Python dependencies
-pip install torch torchvision fastapi uvicorn python-multipart pillow cryptography base58 web3 eth-account
+# Cài đặt Python dependencies cho backend
+pip install -r backend/requirements.txt
 
 # Cài đặt Blockchain dependencies
 cd blockchain
@@ -175,9 +182,15 @@ Dự án V1 đã sẵn sàng để đưa lên Internet. Chúng tôi khuyến ngh
 - **Blockchain**: Triển khai Smart Contract lên mạng **Polygon Amoy Testnet**.
 
 > [!IMPORTANT]
-> Xem hướng dẫn chi tiết từng bước tại: **[DEPLOY_GUIDE.md](file:///d:/Projects/test_face/DEPLOY_GUIDE.md)**
+> Trước khi deploy production, chuẩn bị đủ biến môi trường backend/frontend theo các file mẫu `.env.example`.
+>
+> Checklist chuẩn bị release/deploy:
+>
+> - `docs/release_readiness_checklist.md`
+> - `docs/deploy_readiness_checklist.md`
 
-### Checklist chuẩn bị đẩy GitHub:
+### Checklist chuẩn bị đẩy GitHub
+
 - [ ] Đảm bảo không commit file `.env` chứa key thật.
 - [ ] Đã cấu hình biến môi trường trên Render/Vercel.
 - [ ] Smart contract đã được deploy lên Testnet và cập nhật địa chỉ vào cấu hình.
@@ -190,6 +203,7 @@ Dự án V1 đã sẵn sàng để đưa lên Internet. Chúng tôi khuyến ngh
 | --- | --- | --- |
 | POST | `/api/verify` | Xác thực ảnh deepfake + ký Oracle (chỉ khi `status=ok`) |
 | POST | `/api/verify-zkp` | Xác thực + tạo dữ liệu ZKP (chỉ khi `status=ok`) |
+| GET | `/api/health` | Health check backend |
 | POST | `/api/blockchain/record` | Ghi kết quả lên blockchain (server ký tx) |
 | GET | `/api/zkp-info` | Thông tin ZKP system |
 | POST | `/api/did/create` | Tạo DID mới |
